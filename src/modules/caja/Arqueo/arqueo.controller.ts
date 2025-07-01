@@ -11,6 +11,8 @@ import { ArqueoCierreDetalle } from "../entities/ArqueoCierreDetalle";
 import { AuthenticatedRequest } from "../../auth/auth.middleware";
 import { EstadoCaja } from "../../catalogos/entities/EstadoCaja";
 import { Caja } from "../entities/Caja";
+import puppeteer from "puppeteer";
+import { obtenerArqueoCompleto } from "./services/ObtenerArqueoCompleto";
 
 export const getDatosArqueoInicio = async (req: Request, res: Response): Promise<Response> => {
     try {
@@ -87,7 +89,7 @@ export const cargarArqueo = async (req: Request, res: Response): Promise<Respons
                 },
             });
 
-            const plantillaEnBlanco = (codigoMoneda: string, detallesExistentes : Array<any> = []) =>
+            const plantillaEnBlanco = (codigoMoneda: string, detallesExistentes: Array<any> = []) =>
                 denominaciones
                     .filter(d => d.codigoMoneda.codigo === codigoMoneda)
                     .map(d => {
@@ -130,6 +132,7 @@ export const cargarArqueo = async (req: Request, res: Response): Promise<Respons
                 cerrado: false,
                 message: "Arqueo abierto encontrado.",
                 data: {
+                    idArqueo: arqueo.idApertura,
                     saldoInicialCordoba: plantillaEnBlanco("NIO", arqueo.arqueoAperturaDetalles),
                     saldoInicialDolar: plantillaEnBlanco("USD", arqueo.arqueoAperturaDetalles),
                     saldoFinalCordoba: plantillaEnBlanco("NIO", arqueo.arqueoCierreDetalles),
@@ -249,3 +252,36 @@ export const guardarArqueo = async (req: AuthenticatedRequest, res: Response): P
         });
     }
 };
+export const generarArqueoPdf = async (req: Request, res: Response) => {
+
+    try {
+        const html = await obtenerArqueoCompleto(req.params as any);
+        // 2. Inicializar Puppeteer
+        const browser = await puppeteer.launch({ headless: true });
+        const page = await browser.newPage();
+
+        // 3. Setear el contenido HTML
+        await page.setContent(html, { waitUntil: "networkidle0" });
+
+        // 4. Generar el PDF
+        const pdfBuffer = await page.pdf({
+            format: "A4",
+            printBackground: true,
+            margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+        });
+
+        await browser.close();
+
+        // 5. Enviar el PDF al frontend
+        res.set({
+            "Content-Type": "application/pdf",
+            "Content-Disposition": "attachment; filename=arqueo.pdf",
+        });
+        return res.send(pdfBuffer);
+
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({ success: false, message: "Error generando el PDF" });
+    }
+};
+
