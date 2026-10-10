@@ -285,3 +285,134 @@ export const generarArqueoPdf = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * PATCH /arqueos/:id/cerrar
+ * Cierra el arqueo, calcula diferencias automáticamente
+ */
+export const cerrarArqueo = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const creadoPor = req.user?.id || null;
+
+    if (!id) {
+        return res.status(400).json({
+            success: false,
+            message: "El id del arqueo es requerido.",
+        });
+    }
+
+    try {
+        return await AppDataSource.transaction(async (manager) => {
+            const arqueoRepo = manager.getRepository(AperturaCierreCaja);
+            const estadoCajaRepo = manager.getRepository(EstadoCaja);
+
+            // 1. Buscar el arqueo
+            const arqueo = await arqueoRepo.findOne({
+                where: {
+                    idApertura: id,
+                    eliminado: false,
+                },
+                relations: {
+                    estadoCaja: true,
+                    arqueoAperturaDetalles: {
+                        idDenominacion: { codigoMoneda: true },
+                    },
+                    arqueoCierreDetalles: {
+                        idDenominacion: { codigoMoneda: true },
+                    },
+                },
+            });
+
+            if (!arqueo) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Arqueo no encontrado.",
+                });
+            }
+
+            // 2. Verificar que no esté ya cerrado
+            if (arqueo.estadoCaja.codigo === "CAJA_CERRADA") {
+                return res.status(400).json({
+                    success: false,
+                    message: "El arqueo ya está cerrado.",
+                });
+            }
+
+            // 3. Buscar estado CAJA_CERRADA
+            const estadoCerrada = await estadoCajaRepo.findOneBy({ codigo: "CAJA_CERRADA" });
+            if (!estadoCerrada) {
+                return res.status(500).json({
+                    success: false,
+                    message: "Estado 'CAJA_CERRADA' no encontrado en catálogo.",
+                });
+            }
+
+            // 4. Calcular totales de apertura y cierre
+            const calcularTotal = (detalles: any[], moneda: string) =>
+                detalles
+                    .filter((d: any) => d.idDenominacion?.codigoMoneda?.codigo === moneda)
+                    .reduce((acc: number, d: any) => acc + (d.cantidad * d.valor), 0);
+
+            const totalAperturaCordoba = calcularTotal(arqueo.arqueoAperturaDetalles || [], "NIO");
+            const totalAperturaDolar = calcularTotal(arqueo.arqueoAperturaDetalles || [], "USD");
+            const totalCierreCordoba = calcularTotal(arqueo.arqueoCierreDetalles || [], "NIO");
+            const totalCierreDolar = calcularTotal(arqueo.arqueoCierreDetalles || [], "USD");
+
+            // 5. Obtener ventas del día para calcular diferencias esperadas
+            const ventasDelDia = await manager.query(`
+                SELECT
+                    ISNULL(SUM(CASE WHEN mcd.CodigoMoneda = 'NIO' THEN mcd.Monto ELSE 0 END), 0) AS IngresoNio,
+                    ISNULL(SUM(CASE WHEN mcd.CodigoMoneda = 'USD' THEN mcd.Monto ELSE 0 END), 0) AS IngresoUsd
+                FROM CAJA.MovimientoCaja mc
+                INNER JOIN CAJA.MovimientoCajaDetalle mcd ON mcd.IdMovimientoCaja = mc.IdMovimiento
+                WHERE mc.IdAperturaCaja = @0 AND mc.Eliminado = 0 AND mc.EsIngreso = 1
+            `, [id]);
+
+            const ingresosNio = parseFloat(ventasDelDia[0]?.IngresoNio) || 0;
+            const ingresosUsd = parseFloat(ventasDelDia[0]?.IngresoUsd) || 0;
+
+            const esperadoNio = totalAperturaCordoba + ingresosNio;
+            const esperadoUsd = totalAperturaDolar + ingresosUsd;
+
+            const diferenciaNio = totalCierreCordoba - esperadoNio;
+            const diferenciaUsd = totalCierreDolar - esperadoUsd;
+
+            // 6. Actualizar arqueo a cerrado
+            arqueo.idEstadoCaja = estadoCerrada.idEstadoCaja;
+            arqueo.fechaCierre = new Date();
+            arqueo.modificadoPor = creadoPor;
+            arqueo.fechaModificacion = new Date();
+            arqueo.observaciones = `Cierre: Diferencia NIO: ${diferenciaNio.toFixed(2)}, Diferencia USD: ${diferenciaUsd.toFixed(2)}`;
+
+            await arqueoRepo.save(arqueo);
+
+            return res.status(200).json({
+                success: true,
+                message: "Arqueo cerrado exitosamente.",
+                data: {
+                    idArqueo: arqueo.idApertura,
+                    fechaCierre: arqueo.fechaCierre,
+                    resumen: {
+                        aperturaCordoba: totalAperturaCordoba,
+                        aperturaDolar: totalAperturaDolar,
+                        cierreCordoba: totalCierreCordoba,
+                        cierreDolar: totalCierreDolar,
+                        ingresosNio,
+                        ingresosUsd,
+                        esperadoNio,
+                        esperadoUsd,
+                        diferenciaNio,
+                        diferenciaUsd,
+                    },
+                },
+            });
+        });
+    } catch (error) {
+        console.error("Error al cerrar arqueo:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Error al cerrar arqueo",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+};
+
