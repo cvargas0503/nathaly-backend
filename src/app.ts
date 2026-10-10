@@ -21,6 +21,7 @@ import sucursales from './modules/catalogos/Sucursal/sucursal.routes';
 import permisos from './modules/seguridad/Permiso/permiso.routes';
 import arqueos from './modules/caja/Arqueo/arqueo.routes';
 import movimientosCajas from './modules/caja/MovimientoCaja/movimientoCaja.routes';
+import dashboard from './modules/dashboard/dashboard.routes';
 import cookieParser from 'cookie-parser';
 import { environment } from './config/environment'
 const app = express()
@@ -53,5 +54,6 @@ app.use('/api/v1/permisos', permisos)
 app.use('/api/v1/arqueos', arqueos)
 app.use('/api/v1/caja', movimientosCajas)
 
+app.use('/api/v1/dashboard', dashboard)
 app.use(errorHandler);
 export default app
