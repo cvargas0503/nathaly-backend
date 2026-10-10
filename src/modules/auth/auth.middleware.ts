@@ -1,3 +1,4 @@
+import { environment } from '../../config/environment';
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { AppDataSource } from '../../../ormconfig';
@@ -41,7 +42,7 @@ export const authMiddleware = async (
       return res.status(401).json({ message: 'No autenticado. Token requerido.', success: false });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'REDACTED_JWT_SECRET') as {
+    const decoded = jwt.verify(token, environment.jwtSecret) as {
       idUsuario: number;
       login: string;
     };

@@ -1,3 +1,4 @@
+import { environment } from '../../config/environment';
 import { Request, Response, NextFunction } from 'express'
 import { AppDataSource } from '../../../ormconfig'
 import { Usuario } from './entities/Usuario'
@@ -5,6 +6,11 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { ILike } from 'typeorm'
 import { UsuarioPermiso } from './entities/UsuarioPermiso'
+
+export const logout = (_req: Request, res: Response): void => {
+  res.clearCookie('token', { httpOnly: true, secure: environment.production, sameSite: 'strict' });
+  res.status(200).json({ success: true, message: 'Sesión cerrada' });
+};
 
 export const login = async (
   req: Request,
@@ -36,11 +42,11 @@ export const login = async (
 
     const token = jwt.sign(
       { idUsuario: usuario.idUsuario, login: usuario.login },
-      process.env.JWT_SECRET || 'REDACTED_JWT_SECRET',
+      environment.jwtSecret,
       { expiresIn: '8h' }
     )
     // res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=28800; SameSite=Strict`) // Configurar las cookies
-    res.cookie('token', token, { httpOnly: true, maxAge: 8 * 60 * 60 * 1000, sameSite: 'strict' }) // Configurar las cookies
+    res.cookie('token', token, { httpOnly: true, secure: environment.production, maxAge: 8 * 60 * 60 * 1000, sameSite: 'strict' }) // Configurar las cookies
 
     const permisos = await permisosRepo.find({ where: { idUsuario: usuario.idUsuario, permitido: true, eliminado: false }, relations: ['permiso'] })
 
@@ -67,7 +73,7 @@ export const profile = async (
   try {
     const {token} = req.cookies
     // console.log(req)
-    console.log(token)
+    // Tokens must never be written to application logs.
     if (!token) {
       res.status(401).json({ message: 'Token no proporcionado' })
       return
@@ -75,7 +81,7 @@ export const profile = async (
 
     let decoded: any
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'REDACTED_JWT_SECRET')
+      decoded = jwt.verify(token, environment.jwtSecret)
     } catch (err) {
       res.status(401).json({ message: 'Token inválido o expirado' })
       return
