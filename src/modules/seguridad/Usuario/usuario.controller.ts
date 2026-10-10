@@ -30,6 +30,20 @@ export const getEmpleadosSinUsuario = async (req: AuthenticatedRequest, res: Res
     res.status(500).json({ message: 'Error al obtener el empleado', error });
   }
 };
+
+export const getEmpleadosConUsuario = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const result = await AppDataSource.query(`EXEC SEGURIDAD.sp_ObtenerEmpleadosConUsuario`);
+
+    if (!result || result.length === 0) {
+      return res.status(404).json({ message: 'Empleados no encontrados', success: false });
+    }
+    const usuarios = toCamelCase(result)
+    res.status(200).json({ success: true, data: usuarios });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener el empleado', error });
+  }
+};
 export const crearUsuario = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { usuario, idEmpleado, password } = req.body;
@@ -90,7 +104,7 @@ export const modificarUsuario = async (req: AuthenticatedRequest, res: Response)
 
         // Crear el usuario
         await AppDataSource.query(
-            `UPDATE SEGURIDAD.Usuario 
+            `UPDATE SEGURIDAD.Usuario
             SET ModificadoPor = @0,
             FechaModificacion = GETDATE(),
             PassHash = @1
@@ -116,8 +130,8 @@ export const eliminarUsuario = async (req: AuthenticatedRequest, res: Response) 
 
         // Marcar el usuario como eliminado
         await AppDataSource.query(
-            `UPDATE SEGURIDAD.Usuario 
-            SET Activo = 0, ModificadoPor = @0, FechaModificacion = GETDATE() 
+            `UPDATE SEGURIDAD.Usuario
+            SET Activo = 0, ModificadoPor = @0, FechaModificacion = GETDATE()
             WHERE IdUsuario = @1 AND Eliminado = 0`,
             [idUsuarioEliminador, idUsuario]
         );
