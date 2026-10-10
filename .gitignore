@@ -38,3 +38,11 @@ coverage/
 
 # Optional eslint cache
 .eslintcache
+!.env.example
+# Runtime uploads and database exports
+src/uploads/
+uploads/
+*.bak
+*.mdf
+*.ldf
+*.dump
