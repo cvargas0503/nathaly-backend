@@ -1,28 +1,26 @@
-// src/database/dbMSSQL.ts
 import sql from 'mssql';
+import { environment } from './config/environment';
 
 const sqlConfig: sql.config = {
-  user: 'sa',
-  password: 'REDACTED_DATABASE_PASSWORD',
-  server: '172.20.10.4', // o IP
-  database: 'TIENDAS_NATHALY',
-  port: 1433, // Puerto por defecto de SQL Server
+  user: environment.database.username,
+  password: environment.database.password,
+  server: environment.database.host,
+  database: environment.database.name,
+  port: environment.database.port,
   options: {
-    encrypt: false,      // true si usas Azure
-    trustServerCertificate: true // para evitar errores de SSL
+    encrypt: environment.database.encrypt,
+    trustServerCertificate: environment.database.trustServerCertificate,
   },
-  pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000
-  }
+  pool: { max: 10, min: 0, idleTimeoutMillis: 30000 },
 };
 
-let pool: sql.ConnectionPool;
-
-export const getMSSQLPool = async (): Promise<sql.ConnectionPool> => {
-  if (!pool) {
-    pool = await sql.connect(sqlConfig);
+let poolPromise: Promise<sql.ConnectionPool> | undefined;
+export const getMSSQLPool = (): Promise<sql.ConnectionPool> => {
+  if (!poolPromise) {
+    poolPromise = sql.connect(sqlConfig).catch(error => {
+      poolPromise = undefined;
+      throw error;
+    });
   }
-  return pool;
+  return poolPromise;
 };

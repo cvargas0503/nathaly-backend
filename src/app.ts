@@ -22,16 +22,16 @@ import permisos from './modules/seguridad/Permiso/permiso.routes';
 import arqueos from './modules/caja/Arqueo/arqueo.routes';
 import movimientosCajas from './modules/caja/MovimientoCaja/movimientoCaja.routes';
 import cookieParser from 'cookie-parser';
-import path from 'path'
+import { environment } from './config/environment'
 const app = express()
-const allowedOrigins = ['http://localhost:5173']
+const allowedOrigins = environment.allowedOrigins
 app.use(cors({
   origin: allowedOrigins,
   credentials: true, // permite enviar cookies o tokens
 }));
 app.use(cookieParser())
 app.use(express.json())
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(environment.uploadsDirectory));
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/lineas', linea)
 app.use('/api/v1/marcas', marca)

@@ -1,3 +1,4 @@
+import { environment } from '../../config/environment';
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -11,7 +12,7 @@ const storageDinamicoPorRuta = multer.diskStorage({
     if (ruta.includes("/sucursales")) carpeta = "sucursales";
     else if (ruta.includes("/productos")) carpeta = "productos";
 
-    const carpetaFinal = path.join(__dirname, "../../uploads", carpeta);
+    const carpetaFinal = path.join(environment.uploadsDirectory, carpeta);
     if (!fs.existsSync(carpetaFinal)) fs.mkdirSync(carpetaFinal, { recursive: true });
 
     cb(null, carpetaFinal);

@@ -1,16 +1,18 @@
-import { DataSource } from 'typeorm'
+import { DataSource } from 'typeorm';
+import { environment } from './src/config/environment';
 
 export const AppDataSource = new DataSource({
   type: 'mssql',
-  host: '172.20.10.4',
-  port: 1433,
-  username: 'sa',
-  password: 'REDACTED_DATABASE_PASSWORD',
-  database: 'TIENDAS_NATHALY',
-  entities: [__dirname + '/src/modules/**/entities/*.ts'],
+  host: environment.database.host,
+  port: environment.database.port,
+  username: environment.database.username,
+  password: environment.database.password,
+  database: environment.database.name,
+  entities: [__dirname + '/src/modules/**/entities/*.{ts,js}'],
   synchronize: false,
   options: {
-    encrypt: false,
+    encrypt: environment.database.encrypt,
+    trustServerCertificate: environment.database.trustServerCertificate,
     enableArithAbort: true,
-  }
-})
+  },
+});
