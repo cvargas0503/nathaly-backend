@@ -1,0 +1,39 @@
+name: Feature de backend
+description: Requerimiento con responsable, contrato y entrega verificable.
+title: "[FXX] "
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Necesidad y comportamiento esperado
+      description: Explicar usuario, problema y resultado observable.
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Contrato y reglas
+      description: Endpoints, validación, permisos, consistencia y compatibilidad.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Criterios de aceptación y entregables
+      description: Casos verificables, pruebas, migraciones, documentación y evidencia.
+    validations:
+      required: true
+  - type: input
+    id: branch
+    attributes:
+      label: Rama feature
+      placeholder: feature/f01-ajustes-inventario
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Responsable y revisor
+      description: Nombres del equipo; el revisor debe ser otra persona.
+    validations:
+      required: true
