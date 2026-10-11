@@ -1,6 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import authRoutes from './modules/auth/auth.routes'
+import { authMiddleware } from './modules/auth/auth.middleware'
+import { authorizationMiddleware } from './modules/auth/authorization.middleware'
 import { errorHandler } from './modules/auth/auth.middleware'
 import linea from './modules/catalogos/Linea/linea.routes'
 import marca from './modules/catalogos/Marca/marca.routes'
@@ -40,6 +42,7 @@ app.use(cookieParser())
 app.use(express.json())
 app.use('/uploads', express.static(environment.uploadsDirectory));
 app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1', authMiddleware as any, authorizationMiddleware as any)
 app.use('/api/v1/lineas', linea)
 app.use('/api/v1/marcas', marca)
 app.use('/api/v1/categorias', categoria)

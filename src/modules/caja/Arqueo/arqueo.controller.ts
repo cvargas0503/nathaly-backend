@@ -261,7 +261,7 @@ export const generarArqueoPdf = async (req: Request, res: Response) => {
         const page = await browser.newPage();
 
         // 3. Setear el contenido HTML
-        await page.setContent(html, { waitUntil: "networkidle0" });
+        await page.setContent(html, { waitUntil: "load" });
 
         // 4. Generar el PDF
         const pdfBuffer = await page.pdf({
