@@ -27,3 +27,9 @@ Configurar `NODE_ENV=production`, una clave JWT privada, TLS y `CORS_ORIGINS` co
 Las modificaciones de esquema se realizan mediante migraciones revisadas, con `synchronize=false`. El endpoint de tasa de cambio requiere que la migración haya sido aplicada y guarda los cambios en una transacción.
 
 Consultar [los endpoints](docs/api-endpoints.md). Las pruebas automatizadas no sustituyen las pruebas de integración contra una base SQL Server preparada.
+
+## Trabajo en equipo
+
+Consultar [la asignación de cinco features](docs/requerimientos/README.md), con requerimientos, entregables y criterios de aceptación para cada desarrollador. Las tareas están especificadas y pendientes de implementación.
+
+El flujo de contribución es `feature/* -> develop -> qa -> master`. Cada persona trabaja en su rama feature, sube commits con Conventional Commits y abre un PR hacia `develop`; el integrador promueve a QA y después a master con revisión y evidencia. Seguir [la guía de Git Flow y los comandos de clonación/entrega](docs/git-flow.md), [el checklist de QA](docs/qa-checklist.md) y [el checklist de liberación](docs/release-checklist.md). `main` se conserva como referencia anterior.
