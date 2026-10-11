@@ -4,13 +4,13 @@ Fecha: 11 de octubre de 2026. Repositorio: https://github.com/cvargas0503/nathal
 
 Estos documentos son requerimientos para implementar; las cinco features todavía no están desarrolladas. Los responsables se identifican como Desarrollador 1 a 5 hasta que el coordinador asigne nombres. Cada persona desarrolla una feature y revisa el PR de la siguiente persona; el Desarrollador 5 revisa al 1. Nadie aprueba su propio trabajo.
 
-| Responsable | Requerimiento | Rama asignada | Revisor |
-| --- | --- | --- | --- |
-| Desarrollador 1 | [F01: Ajustes de inventario](F01-ajustes-inventario.md) | `feature/f01-ajustes-inventario` | Desarrollador 2 |
-| Desarrollador 2 | [F02: Devoluciones parciales e idempotentes](F02-devoluciones-parciales.md) | `feature/f02-devoluciones-parciales` | Desarrollador 3 |
-| Desarrollador 3 | [F03: Notificaciones por usuario](F03-notificaciones-usuario.md) | `feature/f03-notificaciones-usuario` | Desarrollador 4 |
-| Desarrollador 4 | [F04: Auditoría de catálogos](F04-auditoria-catalogos.md) | `feature/f04-auditoria-catalogos` | Desarrollador 5 |
-| Desarrollador 5 | [F05: Sugerencias de reposición](F05-reposicion-inventario.md) | `feature/f05-reposicion-inventario` | Desarrollador 1 |
+| Responsable | Requerimiento | Issue | Rama asignada | Revisor |
+| --- | --- | --- | --- | --- |
+| Desarrollador 1 | [F01: Ajustes de inventario](F01-ajustes-inventario.md) | [#3](https://github.com/cvargas0503/nathaly-backend/issues/3) | `feature/f01-ajustes-inventario` | Desarrollador 2 |
+| Desarrollador 2 | [F02: Devoluciones parciales e idempotentes](F02-devoluciones-parciales.md) | [#4](https://github.com/cvargas0503/nathaly-backend/issues/4) | `feature/f02-devoluciones-parciales` | Desarrollador 3 |
+| Desarrollador 3 | [F03: Notificaciones por usuario](F03-notificaciones-usuario.md) | [#5](https://github.com/cvargas0503/nathaly-backend/issues/5) | `feature/f03-notificaciones-usuario` | Desarrollador 4 |
+| Desarrollador 4 | [F04: Auditoría de catálogos](F04-auditoria-catalogos.md) | [#6](https://github.com/cvargas0503/nathaly-backend/issues/6) | `feature/f04-auditoria-catalogos` | Desarrollador 5 |
+| Desarrollador 5 | [F05: Sugerencias de reposición](F05-reposicion-inventario.md) | [#7](https://github.com/cvargas0503/nathaly-backend/issues/7) | `feature/f05-reposicion-inventario` | Desarrollador 1 |
 
 ## Reglas compartidas y entregable de cada persona
 
