@@ -11,7 +11,7 @@ import { Ajuste } from "./Ajuste";
 import { Producto } from "./Producto";
 
 @Index("PK__AjusteDe__E43646A5BD8FB464", ["idDetalle"], { unique: true })
-@Entity("AjusteDetalle")
+@Entity("AjusteDetalle", { schema: 'INVENTARIO' })
 export class AjusteDetalle {
   @PrimaryGeneratedColumn({ type: "bigint", name: "IdDetalle" })
   idDetalle: string;

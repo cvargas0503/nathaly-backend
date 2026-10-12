@@ -17,6 +17,7 @@ export function permisosPara(method: string, path: string): string[] {
     case 'ventas': return lectura ? (accion === 'ventas-pendientes' ? ['PAGAR_VENTAS', 'VER_VENTAS'] : ['VER_VENTAS'])
       : method === 'POST' ? ['NUEVA_VENTA'] : ['ANULAR_VENTA'];
     case 'pedidos': return lectura ? ['VER_PEDIDOS'] : method === 'PATCH' ? ['NUEVA_VENTA'] : ['NUEVO_PEDIDO'];
+    case 'ajustes': return [lectura ? 'VER_AJUSTES' : 'REGISTRAR_AJUSTES'];
     case 'compras': return [lectura ? 'VER_COMPRAS' : 'NUEVA_COMPRA'];
     case 'traslados': return [lectura ? 'VER_TRASLADOS' : 'NUEVO_TRASLADO'];
     case 'kardex': return ['VER_KARDEX'];

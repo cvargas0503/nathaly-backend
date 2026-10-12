@@ -12,7 +12,7 @@ import { Producto } from "./Producto";
 @Index("PK__Existenc__522EEE63B1158289", ["idBodega", "idProducto"], {
   unique: true,
 })
-@Entity("Existencia")
+@Entity("Existencia", { schema: 'INVENTARIO' })
 export class Existencia {
   @Column("int", { primary: true, name: "IdBodega" })
   idBodega: number;
