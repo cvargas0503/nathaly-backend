@@ -1,0 +1,27 @@
+const { test, after } = require('node:test');
+const assert = require('node:assert/strict');
+const qa = require('../support/feature-qa.cjs');
+const { queryReplenishment } = require('../../dist/src/modules/reposicion/reposicion.service');
+test('F05 SQL Server: warehouse joins, full totals, missing stock, diagnostics and no writes', async () => {
+  const db=await qa.setup('F05');
+  await db.query('UPDATE INVENTARIO.Existencia SET Stock=5 WHERE IdBodega=1 AND IdProducto=26');
+  const counts=()=>db.query('SELECT (SELECT COUNT(*) FROM INVENTARIO.Producto) AS productos,(SELECT COUNT(*) FROM INVENTARIO.Existencia) AS existencias,(SELECT COUNT(*) FROM INVENTARIO.Kardex) AS kardex,(SELECT COUNT(*) FROM INVENTARIO.Ajuste) AS ajustes');
+  const before=await counts();
+  const detail=await db.transaction('REPEATABLE READ',m=>queryReplenishment(m,{idBodega:'1'},false));
+  const summary=await db.transaction('REPEATABLE READ',m=>queryReplenishment(m,{idBodega:'1'},true));
+  assert.equal(detail.data.length,20);assert.equal(detail.pagination.total,25);
+  assert.equal(summary.data[0].totalProductos,25);assert.equal(summary.data[0].cantidadSugerida,'225.00');
+  assert.equal(summary.advertencias.productosSinExistencia,1);
+  assert.equal(detail.data[0].costoEstimado,'180.0000');
+  assert.equal((await db.transaction(m=>queryReplenishment(m,{idBodega:'2'},false))).data.length,0);
+  assert.deepEqual(await counts(),before);
+  await db.query('UPDATE INVENTARIO.Producto SET ExistenciaMax=0 WHERE IdProducto=1');
+  await db.query('UPDATE INVENTARIO.Existencia SET Stock=-1 WHERE IdBodega=1 AND IdProducto=2');
+  await db.query('UPDATE CATALOGOS.Proveedor SET Eliminado=1 WHERE IdProveedor=2');
+  await qa.insert('INVENTARIO.Existencia',{IdBodega:1,IdProducto:27,Stock:'3.00',Eliminado:false});
+  const invalid=await db.transaction(m=>queryReplenishment(m,{idBodega:'1'},true));
+  assert.equal(invalid.diagnosticos.length,3);assert.equal(invalid.data[0].totalProductos,23);
+  assert.deepEqual(invalid.diagnosticos.map(r=>r.motivo),['CONFIGURACION_INVALIDA','STOCK_NEGATIVO','PROVEEDOR_NO_DISPONIBLE']);
+  await qa.authChecks([['GET','/reposicion?idBodega=1'],['GET','/reposicion/resumen?idBodega=1']]);
+});
+after(qa.cleanup);
