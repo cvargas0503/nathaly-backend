@@ -17,6 +17,6 @@ router.put('/:id', updateLinea as any);
 
 
 // Eliminar una línea por ID
-router.delete('/', deleteLineas);
+router.delete('/', deleteLineas as any);
 
 export default router;

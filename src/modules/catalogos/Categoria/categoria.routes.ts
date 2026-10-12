@@ -17,6 +17,6 @@ router.put('/:id', updateCategoria as any);
 
 
 // Eliminar una línea por ID
-router.delete('/', deleteCategorias);
+router.delete('/', deleteCategorias as any);
 
 export default router;
