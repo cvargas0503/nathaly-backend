@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "start": "node dist/src/index.js",
     "test": "npm run build && node --test tests/*.test.cjs",
+    "test:features": "npm run build && node --test --test-concurrency=1 tests/features/*.integration.cjs",
     "test:integration": "npm run build && node --test tests/integration/*.integration.cjs"
   },
   "keywords": [],

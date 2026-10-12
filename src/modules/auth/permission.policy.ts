@@ -14,6 +14,7 @@ export function permisosPara(method: string, path: string): string[] {
       ? [catalogos[recurso], ...operativos] : [catalogos[recurso]];
   }
   switch (recurso) {
+    case 'reposicion': return ['VER_REPOSICION'];
     case 'ventas': return lectura ? (accion === 'ventas-pendientes' ? ['PAGAR_VENTAS', 'VER_VENTAS'] : ['VER_VENTAS'])
       : method === 'POST' ? ['NUEVA_VENTA'] : ['ANULAR_VENTA'];
     case 'pedidos': return lectura ? ['VER_PEDIDOS'] : method === 'PATCH' ? ['NUEVA_VENTA'] : ['NUEVO_PEDIDO'];
