@@ -33,6 +33,13 @@ export class Notificacion {
   })
   fecha: Date | null;
 
+  @Column('nvarchar', { name: 'ClaveCondicion', length: 150, nullable: true })
+  claveCondicion: string | null;
+  @Column('bit', { name: 'Activa', default: () => '(1)' })
+  activa: boolean;
+  @Column('datetime2', { name: 'FechaCierre', nullable: true })
+  fechaCierre: Date | null;
+
   constructor(init?: Partial<Notificacion>) {
     Object.assign(this, init);
   }
