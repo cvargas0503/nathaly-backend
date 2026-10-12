@@ -14,5 +14,6 @@ export const AppDataSource = new DataSource({
     encrypt: environment.database.encrypt,
     trustServerCertificate: environment.database.trustServerCertificate,
     enableArithAbort: true,
+    useUTC: true,
   },
 });
