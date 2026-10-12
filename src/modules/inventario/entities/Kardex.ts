@@ -11,7 +11,7 @@ import { Bodega } from "./Bodega";
 import { Producto } from "./Producto";
 
 @Index("PK__Kardex__BC1BA400FE2D22B5", ["idKardex"], { unique: true })
-@Entity("Kardex")
+@Entity("Kardex", { schema: 'INVENTARIO' })
 export class Kardex {
   @PrimaryGeneratedColumn({ type: "bigint", name: "IdKardex" })
   idKardex: string;
