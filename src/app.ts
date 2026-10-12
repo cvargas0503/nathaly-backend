@@ -28,6 +28,7 @@ import reportes from './modules/reportes/reportes.routes';
 import configuracion from './modules/configuracion/configuracion.routes';
 import busqueda from './modules/busqueda/busqueda.routes';
 import notificaciones from './modules/notificaciones/notificaciones.routes';
+import ajustes from './modules/ajustes/ajustes.routes';
 import devoluciones from './modules/devoluciones/devoluciones.routes';
 import auditoria from './modules/auditoria/auditoria.routes';
 import reposicion from './modules/reposicion/reposicion.routes';
@@ -69,6 +70,7 @@ app.use('/api/v1/reportes', reportes)
 app.use('/api/v1/configuracion', configuracion)
 app.use('/api/v1/busqueda', busqueda)
 app.use('/api/v1/notificaciones', notificaciones)
+app.use('/api/v1/ajustes', ajustes)
 app.use('/api/v1/devoluciones', devoluciones)
 app.use('/api/v1/auditoria', auditoria)
 app.use('/api/v1/reposicion', reposicion)

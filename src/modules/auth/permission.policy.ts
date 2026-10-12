@@ -18,6 +18,7 @@ export function permisosPara(method: string, path: string): string[] {
     case 'ventas': return lectura ? (accion === 'ventas-pendientes' ? ['PAGAR_VENTAS', 'VER_VENTAS'] : ['VER_VENTAS'])
       : method === 'POST' ? ['NUEVA_VENTA'] : ['ANULAR_VENTA'];
     case 'pedidos': return lectura ? ['VER_PEDIDOS'] : method === 'PATCH' ? ['NUEVA_VENTA'] : ['NUEVO_PEDIDO'];
+    case 'ajustes': return [lectura ? 'VER_AJUSTES' : 'REGISTRAR_AJUSTES'];
     case 'compras': return [lectura ? 'VER_COMPRAS' : 'NUEVA_COMPRA'];
     case 'traslados': return [lectura ? 'VER_TRASLADOS' : 'NUEVO_TRASLADO'];
     case 'kardex': return ['VER_KARDEX'];
@@ -38,9 +39,12 @@ export function permisosPara(method: string, path: string): string[] {
     case 'reportes': return [accion === 'compras' ? 'VER_COMPRAS' : accion === 'inventario' ? 'VER_KARDEX'
       : accion === 'caja' ? 'VER_MOVIMIENTOS_CAJA' : 'VER_VENTAS'];
     case 'devoluciones': return [lectura ? 'VER_VENTAS' : 'ANULAR_VENTA'];
+    case 'auditoria': return ['VER_AUDITORIA_CATALOGOS'];
+    case 'busqueda': case 'dashboard': return ['GESTIONAR_USUARIOS'];
+    case 'devoluciones': return [lectura ? 'VER_DEVOLUCIONES' : 'REGISTRAR_DEVOLUCIONES'];
     case 'auditoria': case 'busqueda': case 'dashboard': return ['GESTIONAR_USUARIOS'];
     case 'configuracion': return lectura ? operativos : ['GESTIONAR_PERMISOS'];
-    case 'notificaciones': return ['VER_KARDEX', 'GESTIONAR_PRODUCTOS'];
+    case 'notificaciones': return ['VER_NOTIFICACIONES'];
     default: return [];
   }
 }
