@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { registrarDevolucion, listarDevoluciones, obtenerDevolucion } from './devoluciones.controller';
+import { disponibilidad, registrarDevolucion, listarDevoluciones, obtenerDevolucion } from './devoluciones.controller';
 import { authMiddleware } from '../auth/auth.middleware';
 
 const router = Router();
@@ -13,6 +13,7 @@ router.post('/', registrarDevolucion as any);
 router.get('/', listarDevoluciones as any);
 
 // GET /api/v1/devoluciones/:id
+router.get('/ventas/:idVenta/disponibilidad', disponibilidad as any);
 router.get('/:id', obtenerDevolucion as any);
 
 export default router;

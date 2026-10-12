@@ -1,3 +1,4 @@
+import { sesionRevocada } from './session.service';
 import { environment } from '../../config/environment';
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
@@ -35,6 +36,7 @@ export const authMiddleware = async (
   res: Response,
   next: NextFunction
 ) => {
+  if ((req as AuthenticatedRequest).user) return next();
   try {
     const token = req.cookies.token;
 
@@ -46,6 +48,8 @@ export const authMiddleware = async (
       idUsuario: number;
       login: string;
     };
+
+    if (await sesionRevocada(token)) return res.status(401).json({ message: 'Sesión cerrada.', success: false });
 
     const repo = AppDataSource.getRepository(Usuario);
     const usuario = await repo.findOne({ where: { idUsuario: decoded.idUsuario } });

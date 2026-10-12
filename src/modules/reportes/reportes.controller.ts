@@ -190,7 +190,7 @@ export const exportarReporteVentas = async (req: AuthenticatedRequest, res: Resp
         if (formato === 'pdf') {
             const browser = await puppeteer.launch({ headless: true });
             const page = await browser.newPage();
-            await page.setContent(html, { waitUntil: 'networkidle0' });
+            await page.setContent(html, { waitUntil: 'load' });
             const pdfBuffer = await page.pdf({
                 format: 'A4',
                 landscape: true,
