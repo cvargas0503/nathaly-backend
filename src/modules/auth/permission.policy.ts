@@ -40,7 +40,7 @@ export function permisosPara(method: string, path: string): string[] {
     case 'devoluciones': return [lectura ? 'VER_DEVOLUCIONES' : 'REGISTRAR_DEVOLUCIONES'];
     case 'auditoria': case 'busqueda': case 'dashboard': return ['GESTIONAR_USUARIOS'];
     case 'configuracion': return lectura ? operativos : ['GESTIONAR_PERMISOS'];
-    case 'notificaciones': return ['VER_KARDEX', 'GESTIONAR_PRODUCTOS'];
+    case 'notificaciones': return ['VER_NOTIFICACIONES'];
     default: return [];
   }
 }
