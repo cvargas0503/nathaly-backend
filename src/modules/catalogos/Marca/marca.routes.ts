@@ -17,6 +17,6 @@ router.put('/:id', updateMarca as any);
 
 
 // Eliminar una marca por ID
-router.delete('/', deleteMarcas);
+router.delete('/', deleteMarcas as any);
 
 export default router;

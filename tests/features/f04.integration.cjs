@@ -1,0 +1,45 @@
+const { test, after } = require('node:test');
+const assert = require('node:assert/strict');
+const qa = require('../support/feature-qa.cjs');
+const { catalogHandlers } = require('../../dist/src/modules/auditoria/services/catalog-events');
+const { Categoria } = require('../../dist/src/modules/catalogos/entities/Categoria');
+const { Marca } = require('../../dist/src/modules/catalogos/entities/Marca');
+const { Linea } = require('../../dist/src/modules/catalogos/entities/Linea');
+const { obtenerAuditoria } = require('../../dist/src/modules/auditoria/auditoria.controller');
+function response() { return { statusCode:200, status(n){this.statusCode=n;return this}, json(body){this.body=body;return this} }; }
+async function invoke(fn,body={},params={},query={}) {const res=response();await fn({user:{id:1,login:'qa_a'},body,params,query},res);return res;}
+test('F04 SQL Server: event chains, no-op updates, bulk deletion and rollback when auditing fails', async () => {
+  const db = await qa.setup('F04');
+  const h = catalogHandlers(Categoria,'idCategoria','categorias','Categoria',50);
+  const created = await invoke(h.create,{nombre:'Demo'}); assert.equal(created.statusCode,201);
+  const id=String(created.body.data.idCategoria);
+  await invoke(h.update,{nombre:'Demo Dos'},{id}); await invoke(h.update,{nombre:'Demo Tres'},{id});
+  await invoke(h.update,{nombre:'Demo Tres'},{id});
+  assert.equal((await db.query("SELECT COUNT(*) AS n FROM ADMIN.Auditoria WHERE Entidad='categorias'"))[0].n,3);
+  await invoke(h.delete,{ids:[id]}); await invoke(h.delete,{ids:[id]});
+  const events=await db.query("SELECT * FROM ADMIN.Auditoria WHERE Entidad='categorias' ORDER BY Fecha,IdAuditoria");
+  assert.equal(events.length,4); assert.equal(events[0].DatosAnterior,null);
+  for(let i=1;i<events.length;i++) assert.deepEqual(JSON.parse(events[i].DatosAnterior),JSON.parse(events[i-1].DatosNuevo));
+  assert.equal(JSON.parse(events[3].DatosNuevo).eliminado,true);
+  const m=catalogHandlers(Marca,'idMarca','marcas','Marca',50), ids=[];
+  for(const nombre of ['Marca A','Marca B','Marca C','Marca D']) ids.push((await invoke(m.create,{nombre})).body.data.idMarca);
+  await invoke(m.delete,{ids:[ids[3]]});
+  const result=await invoke(m.delete,{ids}); assert.equal(result.body.count,3);
+  await db.query("CREATE TRIGGER ADMIN.QA_FalloAuditoria ON ADMIN.Auditoria AFTER INSERT AS THROW 51000,'QA fallo auditoria',1");
+  const failed=await invoke(h.create,{nombre:'Debe Revertir'});assert.equal(failed.statusCode,500);
+  assert.equal((await db.query("SELECT COUNT(*) AS n FROM CATALOGOS.Categoria WHERE Nombre='DEBE REVERTIR'"))[0].n,0);
+  await db.query('DROP TRIGGER ADMIN.QA_FalloAuditoria');
+  const lines = catalogHandlers(Linea,'idLinea','lineas','Línea',50);
+  const lineCreated = await invoke(lines.create,{nombre:'Linea Demo'});
+  assert.equal(lineCreated.statusCode,201);
+  assert.equal((await db.query("SELECT COUNT(*) AS n FROM ADMIN.Auditoria WHERE Entidad='lineas'"))[0].n,1);
+  await db.query("UPDATE ADMIN.Auditoria SET Fecha='2026-10-11T12:00:00' WHERE Entidad='categorias'");
+  const range={desde:'2026-10-11T00:00:00Z',hasta:'2026-10-12T00:00:00Z'};
+  const page1=await invoke(obtenerAuditoria,{}, {}, {...range,entidad:'categorias',usuarioId:'1',limit:'2',page:'1',incluirDatos:'true'});
+  const page2=await invoke(obtenerAuditoria,{}, {}, {...range,entidad:'categorias',usuarioId:'1',limit:'2',page:'2'});
+  assert.equal(page1.body.pagination.total,4); assert.equal(page2.body.pagination.total,4);
+  assert.equal(new Set([...page1.body.data,...page2.body.data].map(r=>r.idAuditoria)).size,4);
+  assert.ok(page1.body.data[0].datosNuevo); assert.equal('datosNuevo' in page2.body.data[0],false);
+  await qa.authChecks([['GET','/auditoria'],['POST','/categorias'],['PUT','/marcas/1'],['DELETE','/lineas']]);
+});
+after(qa.cleanup);
