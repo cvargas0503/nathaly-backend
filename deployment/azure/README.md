@@ -39,6 +39,8 @@ $target = @{
 ./Deploy-Azure.ps1 -Mode Validate @target
 ```
 
+`-SqlLocation` permite utilizar una región SQL distinta de `Location` cuando la suscripción restringe la creación de SQL en la región de la aplicación. Si se omite, toma el valor de `Location`. Confirmar primero la disponibilidad mediante Capabilities y conservar la primera región elegida por la oferta gratuita. Este parámetro no mueve el registro ni el entorno de contenedores existentes.
+
 Copiar `.env.azure.example` a un archivo privado excluido del control de versiones y completarlo localmente. Las contraseñas deben ser distintas de las usadas en entornos reales. El script lee ese archivo sin ejecutarlo y no imprime sus valores. Los archivos de parámetros que genera se protegen con permisos de usuario y se eliminan al finalizar; `.private` está excluido de Git. No iniciar una transcripción de PowerShell ni utilizar `--debug` durante operaciones con secretos.
 
 ## Base de datos e inicialización

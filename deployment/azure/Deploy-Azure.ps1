@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory)][ValidateSet('Validate','CreateDatabase','DeployApp')][string]$Mode,
     [Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F-]{36}$')][string]$SubscriptionId,
     [Parameter(Mandatory)][ValidatePattern('^[a-z0-9-]+$')][string]$Location,
+    [ValidatePattern('^$|^[a-z0-9-]+$')][string]$SqlLocation='',
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9_.()-]+$')][string]$ResourceGroup,
     [Parameter(Mandatory)][ValidatePattern('^[a-z][a-z0-9-]{2,61}[a-z0-9]$')][string]$SqlServerName,
     [ValidatePattern('^[a-z][a-z0-9-]{1,29}[a-z0-9]$')][string]$AppName='nathaly-demo',
@@ -22,11 +23,12 @@ param(
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $script:Az=(Get-Command $AzExecutable -ErrorAction Stop).Source
-$script:Subscription=$SubscriptionId
+$script:AzureSubscriptionId=$SubscriptionId
 $script:TemporaryFiles=[System.Collections.Generic.List[string]]::new()
 $dbName='NATHALY_DEMO'
 $sqlApi='2023-08-01'
 $appApi='2024-03-01'
+if (-not $SqlLocation) { $SqlLocation=$Location }
 $sqlId="/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.Sql/servers/$SqlServerName"
 $appId="/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.App/containerApps/$AppName"
 $environmentId="/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroup/providers/Microsoft.App/managedEnvironments/$EnvironmentName"
@@ -38,10 +40,17 @@ function Field($Object,[string]$Name) {
     return $null
 }
 function Invoke-AzJson([string[]]$Arguments) {
-    $lines=& $script:Az @Arguments --subscription $script:Subscription --only-show-errors --output json 2>&1
+    $lines=& $script:Az @Arguments --subscription $script:AzureSubscriptionId --only-show-errors --output json 2>&1
     if ($LASTEXITCODE -ne 0) {
-        # Native CLI errors can echo arguments. Keep secret-bearing errors off console/transcripts.
-        throw 'Azure CLI returned an error. Inspect the named deployment/resource in Azure; no paid fallback or automatic retry was performed.'
+        $operation=($Arguments | Select-Object -First 2) -join ' '
+        $diagnostic=($lines | ForEach-Object { $_.ToString() }) -join "`n"
+        $privateVariable=Get-Variable -Name privateValues -Scope Script -ErrorAction SilentlyContinue
+        if ($privateVariable -and $privateVariable.Value -is [hashtable]) {
+            foreach ($secret in $privateVariable.Value.Values) { if ($secret -and $secret.Length -ge 8) { $diagnostic=$diagnostic.Replace($secret,'[redacted]') } }
+        }
+        $diagnostic=[regex]::Replace($diagnostic,'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+','[redacted-token]')
+        if ($diagnostic.Length -gt 2000) { $diagnostic=$diagnostic.Substring(0,2000) }
+        throw "Azure CLI failed [$operation]: $diagnostic. No paid fallback or automatic retry was performed."
     }
     $json=($lines | ForEach-Object { $_.ToString() }) -join "`n"
     if ([string]::IsNullOrWhiteSpace($json)) { return $null }
@@ -145,22 +154,25 @@ function Confirm-ExistingAcr([string]$LoginServer) {
 try {
     $account=Invoke-AzJson @('account','show')
     if ((Field $account 'id') -ne $SubscriptionId -or (Field $account 'state') -ne 'Enabled') { throw 'Sign in to the intended Azure tenant/subscription before running this script.' }
-    $subscription=Get-AzureResource "/subscriptions/$SubscriptionId" '2022-12-01'
-    $policies=Field $subscription 'subscriptionPolicies'
+    $subscriptionDetails=Get-AzureResource "/subscriptions/$SubscriptionId" '2022-12-01'
+    $policies=Field $subscriptionDetails 'subscriptionPolicies'
     if ((Field $policies 'spendingLimit') -ne 'On') { throw 'This no-paid-overages path requires an active subscription spending limit. Do not disable it or switch to pay-as-you-go as a fallback.' }
     if ((Field $policies 'quotaId') -match 'StudentsStarter') { throw 'Azure for Students Starter is not eligible for the SQL free tier.' }
-    $locations=@(Invoke-AzJson @('account','list-locations'))
+    $locationResponse=Get-AzureResource "/subscriptions/$SubscriptionId/locations" '2022-12-01'
+    $locations=@(Field $locationResponse 'value')
     if (-not ($locations | Where-Object { (Field $_ 'name') -eq $Location })) { throw 'The selected Azure region is not available in this subscription.' }
+    if (-not ($locations | Where-Object { (Field $_ 'name') -eq $SqlLocation })) { throw 'The selected SQL region is not available in this subscription.' }
     foreach ($namespace in @('Microsoft.Sql','Microsoft.App')) {
         $provider=Invoke-AzJson @('provider','show','--namespace',$namespace)
         if ((Field $provider 'registrationState') -ne 'Registered') { throw "Register $namespace in the intended subscription first, then rerun validation. This script does not silently register providers." }
         $typeName=if ($namespace -eq 'Microsoft.App') {'managedEnvironments'} else {'servers'}
+        $providerLocation=if ($namespace -eq 'Microsoft.Sql') {$SqlLocation} else {$Location}
         $resourceType=@(Field $provider 'resourceTypes') | Where-Object { (Field $_ 'resourceType') -eq $typeName }
-        $displayName=Field ($locations | Where-Object { (Field $_ 'name') -eq $Location } | Select-Object -First 1) 'displayName'
+        $displayName=Field ($locations | Where-Object { (Field $_ 'name') -eq $providerLocation } | Select-Object -First 1) 'displayName'
         if (-not (@(Field ($resourceType | Select-Object -First 1) 'locations') -contains $displayName)) { throw "$namespace is not available in the selected region." }
     }
 
-    $capabilities=Get-AzureResource "/subscriptions/$SubscriptionId/providers/Microsoft.Sql/locations/$Location/capabilities" $sqlApi
+    $capabilities=Get-AzureResource "/subscriptions/$SubscriptionId/providers/Microsoft.Sql/locations/$SqlLocation/capabilities" $sqlApi
     $eligible=@()
     foreach ($version in @(Field $capabilities 'supportedServerVersions')) {
         foreach ($edition in @(Field $version 'supportedEditions')) {
@@ -175,7 +187,7 @@ try {
         }
     }
     if ($eligible.Count -eq 0) { throw 'The subscription/region API did not confirm GP_S_Gen5 capacity 2 with free-limit AutoPause. Stop instead of creating a paid substitute.' }
-    $usages=Get-AzureResource "/subscriptions/$SubscriptionId/providers/Microsoft.Sql/locations/$Location/usages" $sqlApi
+    $usages=Get-AzureResource "/subscriptions/$SubscriptionId/providers/Microsoft.Sql/locations/$SqlLocation/usages" $sqlApi
     $freeMetric=@(Field $usages 'value') | Where-Object { (Field $_ 'name') -eq 'SubscriptionFreeDatabaseCount' } | Select-Object -First 1
     $servers=@(Invoke-AzJson @('sql','server','list'))
     $existingTarget=$null
@@ -184,7 +196,7 @@ try {
         $databases=Get-AzureResource "$serverId/databases" $sqlApi
         foreach ($database in @(Field $databases 'value')) {
             if ((Field $database 'id') -eq "$sqlId/databases/$dbName") { $existingTarget=$database }
-            if ((Field (Field $database 'properties') 'useFreeLimit') -eq $true -and (Field $database 'location') -ne $Location) { throw 'A free-tier database already selects a different subscription region. Do not create another region as a fallback.' }
+            if ((Field (Field $database 'properties') 'useFreeLimit') -eq $true -and (Field $database 'location') -ne $SqlLocation) { throw 'A free-tier database already selects a different subscription region. Do not create another region as a fallback.' }
         }
     }
     if (-not $existingTarget -and $freeMetric) {
@@ -203,9 +215,9 @@ try {
         $server=$servers | Where-Object { (Field $_ 'id') -eq $sqlId } | Select-Object -First 1
         if (-not $server) {
             $password=Require-Value $privateValues 'SQL_ADMIN_PASSWORD' 16
-            [void](Deploy-Template 'server.arm.json' @{serverName=$SqlServerName;location=$Location;adminLogin=$SqlAdminLogin;adminPassword=$password} 'nathaly-sql-server')
-        } elseif ((Field $server 'location') -ne $Location) { throw 'Existing logical server is in another region; no existing server was modified.' }
-        if (-not $existingTarget) { [void](Deploy-Template 'database.arm.json' @{serverName=$SqlServerName;databaseName=$dbName;location=$Location} 'nathaly-free-database') }
+            [void](Deploy-Template 'server.arm.json' @{serverName=$SqlServerName;location=$SqlLocation;adminLogin=$SqlAdminLogin;adminPassword=$password} 'nathaly-sql-server')
+        } elseif ((Field $server 'location') -ne $SqlLocation) { throw 'Existing logical server is in another region; no existing server was modified.' }
+        if (-not $existingTarget) { [void](Deploy-Template 'database.arm.json' @{serverName=$SqlServerName;databaseName=$dbName;location=$SqlLocation} 'nathaly-free-database') }
         $database=Confirm-FreeDatabase
         if ($BootstrapClientIPv4) { Add-SqlFirewall 'nathaly-bootstrap-client' $BootstrapClientIPv4 }
         Write-Host 'NATHALY_DEMO exists and useFreeLimit=true / AutoPause / max32GB were verified. Initialize the demo schema and a separate runtime user before DeployApp.'
@@ -254,7 +266,7 @@ try {
     if ($response.StatusCode -ne 200) { throw 'Public frontend health check did not succeed.' }
     $health=$response.Content | ConvertFrom-Json
     if ((Field $health 'status') -ne 'ok' -or (Field $health 'service') -ne 'frontend') { throw 'Public health endpoint did not identify the expected frontend image.' }
-    $state=@{subscriptionId=$SubscriptionId;resourceGroup=$ResourceGroup;location=$Location;sqlServerName=$SqlServerName;databaseName=$dbName;appName=$AppName;environmentName=$EnvironmentName;frontendImage=$FrontendImage;backendImage=$BackendImage;revisionSuffix=$RevisionSuffix;url="https://$fqdn";checkedUtc=[DateTime]::UtcNow.ToString('o')}
+    $state=@{subscriptionId=$SubscriptionId;resourceGroup=$ResourceGroup;location=$Location;sqlLocation=$SqlLocation;sqlServerName=$SqlServerName;databaseName=$dbName;appName=$AppName;environmentName=$EnvironmentName;frontendImage=$FrontendImage;backendImage=$BackendImage;revisionSuffix=$RevisionSuffix;url="https://$fqdn";checkedUtc=[DateTime]::UtcNow.ToString('o')}
     [void](Write-PrivateJson $state 'deployment.state.json')
     Write-Host "Azure returned a ready application: https://$fqdn"
     Write-Host 'Frontend health verified. Complete login, database-backed requests, invoice retry and report checks before reporting full functional acceptance.'

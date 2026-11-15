@@ -3,7 +3,7 @@ const path=require('node:path');
 const assert=require('node:assert/strict');
 const crypto=require('node:crypto');
 const root=path.resolve(__dirname,'..');
-const env=Object.fromEntries(fs.readFileSync(path.join(root,'.env'),'utf8').trim().split(/\r?\n/).map(x=>{const i=x.indexOf('=');return[x.slice(0,i),x.slice(i+1)]}));
+const env=Object.fromEntries(fs.readFileSync(process.env.PRIVATE_ENV_FILE||path.join(root,'.env'),'utf8').trim().split(/\r?\n/).map(x=>{const i=x.indexOf('=');return[x.slice(0,i),x.slice(i+1)]}));
 const base=process.env.DEMO_URL||'http://127.0.0.1:8080';
 const evidence=[]; let cookie='';
 async function request(route,expected,options={}) {
@@ -35,6 +35,7 @@ async function request(route,expected,options={}) {
  const retry=await request('/api/v1/ventas/',200,saleOptions);
  assert.equal(retry.data.reutilizada,true);
  assert.deepEqual(first.data.data,retry.data.data);
+ fs.writeFileSync(path.join(root,'tmp','last-invoice.private'),JSON.stringify({base,key,sale,result:first.data.data}));
  await request('/api/v1/ventas/',409,{...saleOptions,body:JSON.stringify({...sale,detalles:[{...sale.detalles[0],cantidad:2}]})});
  await request('/api/v1/reportes/ventas?desde=2026-01-01&hasta=2027-12-31',200);
  const pdf=await fetch(base+'/api/v1/reportes/ventas/exportar?formato=pdf&desde=2026-01-01&hasta=2027-12-31',{headers:{Cookie:cookie},signal:AbortSignal.timeout(120000)});
@@ -43,6 +44,6 @@ async function request(route,expected,options={}) {
  evidence.push({route:'/api/v1/reportes/ventas/exportar',status:pdf.status,bytes:bytes.length,ok:true});
  await request('/api/v1/auth/logout',200,{method:'POST'});
  await request('/api/v1/auth/profile',401);
- fs.writeFileSync(path.join(root,'evidence','http-smoke.json'),JSON.stringify({base,passed:evidence.length,checks:evidence},null,2));
+ fs.writeFileSync(path.join(root,'evidence',process.env.EVIDENCE_NAME||'http-smoke.json'),JSON.stringify({base,passed:evidence.length,checks:evidence},null,2));
  console.log(JSON.stringify({base,passed:evidence.length,checks:evidence},null,2));
 })().catch(e=>{console.error(e.message.replaceAll(env.DEMO_ADMIN_PASSWORD,'[redacted]'));process.exitCode=1});

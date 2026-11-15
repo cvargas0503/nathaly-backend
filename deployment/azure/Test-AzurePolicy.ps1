@@ -10,7 +10,7 @@ Assert ($db.sku.name -eq 'GP_S_Gen5' -and $db.sku.capacity -eq 2) 'Database is n
 Assert ($db.properties.useFreeLimit -eq $true -and $db.properties.freeLimitExhaustionBehavior -eq 'AutoPause') 'SQL free limit guard is missing.'
 Assert ($db.properties.maxSizeBytes -eq 34359738368 -and $db.properties.requestedBackupStorageRedundancy -eq 'Local') 'SQL storage settings differ from the reviewed free configuration.'
 $environment=$resources | Where-Object type -eq 'Microsoft.App/managedEnvironments'
-Assert ($environment.properties.appLogsConfiguration.destination -eq 'none') 'Persistent paid log export is enabled.'
+Assert ($null -eq $environment.properties.appLogsConfiguration.destination -and -not $environment.properties.appLogsConfiguration.PSObject.Properties['logAnalyticsConfiguration']) 'Persistent paid log export is enabled.'
 Assert ($environment.properties.workloadProfiles.Count -eq 1 -and $environment.properties.workloadProfiles[0].workloadProfileType -eq 'Consumption') 'A non-Consumption workload profile was added.'
 $app=$resources | Where-Object type -eq 'Microsoft.App/containerApps'
 Assert ($app.identity -match 'registryIdentityResourceId' -and $app.properties.configuration.registries -match 'registryIdentityResourceId') 'Managed identity must be attached and used for registry pulls.'

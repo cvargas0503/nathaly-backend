@@ -82,7 +82,10 @@ async function main() {
     await pool.request().batch(`IF DATABASE_PRINCIPAL_ID(${quote(appUser)}) IS NULL CREATE USER ${identifier(appUser)} ${createUser};
       ALTER ROLE db_datareader ADD MEMBER ${identifier(appUser)};
       ALTER ROLE db_datawriter ADD MEMBER ${identifier(appUser)};
-      GRANT EXECUTE TO ${identifier(appUser)};`);
+      GRANT EXECUTE TO ${identifier(appUser)};
+      GRANT REFERENCES ON TYPE::VENTAS.TipoVentaDetalle TO ${identifier(appUser)};
+      GRANT REFERENCES ON TYPE::COMPRAS.TipoCompraDetalle TO ${identifier(appUser)};
+      GRANT REFERENCES ON TYPE::INVENTARIO.TipoTrasladoDetalle TO ${identifier(appUser)};`);
     console.log('Demo schema, migrations and application permissions ready. Business records were not copied.');
   } finally { if(pool) await pool.close(); if(master) await master.close(); }
 }
