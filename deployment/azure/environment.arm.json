@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": { "type": "string" },
+    "location": { "type": "string" }
+  },
+  "resources": [{
+    "type": "Microsoft.App/managedEnvironments",
+    "apiVersion": "2024-03-01",
+    "name": "[parameters('environmentName')]",
+    "location": "[parameters('location')]",
+    "tags": { "project": "nathaly", "purpose": "academic-demo" },
+    "properties": {
+      "appLogsConfiguration": { "destination": "none" },
+      "workloadProfiles": [{ "name": "Consumption", "workloadProfileType": "Consumption" }],
+      "zoneRedundant": false
+    }
+  }]
+}

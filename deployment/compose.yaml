@@ -1,0 +1,83 @@
+name: nathaly-demo
+services:
+  database:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Express
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set a private database administrator password}
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+    volumes:
+      - sql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+  initialize:
+    image: nathaly-backend:docker-cloud
+    environment:
+      DB_HOST: database
+      DB_PORT: "1433"
+      DB_ADMIN_USER: sa
+      DB_ADMIN_PASSWORD: ${MSSQL_SA_PASSWORD}
+      DB_NAME: NATHALY_DEMO
+      DB_USER: nathaly_app
+      DB_PASSWORD: ${DB_APP_PASSWORD:?Set a private application database password}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:?Set a private demo login password}
+      DB_ENCRYPT: "true"
+      DB_TRUST_SERVER_CERTIFICATE: "true"
+    entrypoint: ["node", "/app/deploy/scripts/initialize.cjs"]
+    volumes:
+      - ./database:/app/deploy/database:ro
+      - ./scripts:/app/deploy/scripts:ro
+      - ../src/migrations:/app/migrations:ro
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+  backend:
+    image: nathaly-backend:docker-cloud
+    build:
+      context: ..
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DB_HOST: database
+      DB_PORT: "1433"
+      DB_NAME: NATHALY_DEMO
+      DB_USER: nathaly_app
+      DB_PASSWORD: ${DB_APP_PASSWORD}
+      DB_ENCRYPT: "true"
+      DB_TRUST_SERVER_CERTIFICATE: "true"
+      JWT_SECRET: ${JWT_SECRET:?Set a private signing key}
+      CORS_ORIGINS: http://localhost:8080
+      UPLOADS_DIR: /app/uploads
+      CHROMIUM_DISABLE_SANDBOX: "true"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      initialize:
+        condition: service_completed_successfully
+    restart: unless-stopped
+  frontend:
+    image: nathaly-frontend:docker-cloud
+    build:
+      context: ../../frontend
+      args:
+        VITE_API_URL: /api/v1
+    environment:
+      PORT: "8080"
+      API_UPSTREAM: backend:3000
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  sql-data:
+  uploads:
+
