@@ -2,6 +2,8 @@
 
 Backend de inventario, ventas, compras, caja y seguridad construido con Express, TypeScript, TypeORM y SQL Server.
 
+Para ejecutar el servidor en un contenedor, consultar [la configuración Docker](docs/deployment-docker.md). La imagen incluye Node.js 24, Chromium, comprobaciones de salud y cierre ordenado; la base SQL Server debe prepararse por separado.
+
 ## Desarrollo
 
 Requisitos: Node.js 22.15 o superior, npm y una base SQL Server con el esquema del sistema existente.

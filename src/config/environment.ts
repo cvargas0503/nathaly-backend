@@ -24,12 +24,20 @@ function boolean(name: string, fallback: boolean): boolean {
   return value === 'true';
 }
 
+function attempts(): number {
+  const value = Number(process.env.DB_CONNECT_ATTEMPTS ?? 30);
+  if (!Number.isInteger(value) || value < 1 || value > 60) throw new Error('Invalid DB_CONNECT_ATTEMPTS');
+  return value;
+}
+
 const jwtSecret = required('JWT_SECRET');
 if (jwtSecret.length < 32) throw new Error('JWT_SECRET must contain at least 32 characters');
 
 export const environment = {
   port: port('PORT', 3000),
   production: process.env.NODE_ENV === 'production',
+  databaseConnectAttempts: attempts(),
+  chromiumDisableSandbox: boolean('CHROMIUM_DISABLE_SANDBOX', false),
   jwtSecret,
   allowedOrigins: (process.env.CORS_ORIGINS ?? 'http://localhost:5173')
     .split(',').map(origin => origin.trim()).filter(Boolean),

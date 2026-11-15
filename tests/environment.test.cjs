@@ -30,6 +30,10 @@ test('rejects invalid database ports and boolean options', () => {
   assert.notEqual(run({ DB_PORT: 'NaN' }).status, 0);
   assert.notEqual(run({ DB_PORT: '65536' }).status, 0);
   assert.notEqual(run({ DB_ENCRYPT: 'yes' }).status, 0);
+  assert.notEqual(run({ DB_CONNECT_ATTEMPTS: '0' }).status, 0);
+  assert.notEqual(run({ DB_CONNECT_ATTEMPTS: '61' }).status, 0);
+  assert.notEqual(run({ DB_CONNECT_ATTEMPTS: '1.5' }).status, 0);
+  assert.notEqual(run({ CHROMIUM_DISABLE_SANDBOX: 'yes' }).status, 0);
 });
 
 test('accepts deployment settings and parses comma-separated origins', () => {

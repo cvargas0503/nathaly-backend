@@ -1,0 +1,99 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": { "type": "string" },
+    "environmentName": { "type": "string" },
+    "location": { "type": "string" },
+    "frontendImage": { "type": "string" },
+    "backendImage": { "type": "string" },
+    "frontendOrigin": { "type": "string" },
+    "databaseHost": { "type": "string" },
+    "databaseName": { "type": "string", "allowedValues": ["NATHALY_DEMO"] },
+    "databaseUser": { "type": "string" },
+    "databasePassword": { "type": "securestring" },
+    "jwtSecret": { "type": "securestring", "minLength": 32 },
+    "registryServer": { "type": "string", "defaultValue": "" },
+    "registryIdentityResourceId": { "type": "string", "defaultValue": "" },
+    "registryUsername": { "type": "string", "defaultValue": "" },
+    "registryPassword": { "type": "securestring", "defaultValue": "" },
+    "revisionSuffix": { "type": "string", "maxLength": 20 }
+  },
+  "resources": [{
+    "type": "Microsoft.App/containerApps",
+    "apiVersion": "2024-03-01",
+    "name": "[parameters('appName')]",
+    "location": "[parameters('location')]",
+    "tags": { "project": "nathaly", "purpose": "academic-demo" },
+    "identity": "[if(empty(parameters('registryIdentityResourceId')), createObject('type', 'None'), createObject('type', 'UserAssigned', 'userAssignedIdentities', createObject(parameters('registryIdentityResourceId'), json('{}'))))]",
+    "properties": {
+      "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('environmentName'))]",
+      "workloadProfileName": "Consumption",
+      "configuration": {
+        "activeRevisionsMode": "Single",
+        "ingress": {
+          "external": true,
+          "targetPort": 8080,
+          "transport": "auto",
+          "allowInsecure": false,
+          "traffic": [{ "latestRevision": true, "weight": 100 }]
+        },
+        "registries": "[if(empty(parameters('registryServer')), json('[]'), if(empty(parameters('registryIdentityResourceId')), createArray(createObject('server', parameters('registryServer'), 'username', parameters('registryUsername'), 'passwordSecretRef', 'registry-password')), createArray(createObject('server', parameters('registryServer'), 'identity', parameters('registryIdentityResourceId')))))]",
+        "secrets": "[concat(createArray(createObject('name', 'db-password', 'value', parameters('databasePassword')), createObject('name', 'jwt-secret', 'value', parameters('jwtSecret'))), if(or(empty(parameters('registryServer')), not(empty(parameters('registryIdentityResourceId')))), json('[]'), createArray(createObject('name', 'registry-password', 'value', parameters('registryPassword')))))]"
+      },
+      "template": {
+        "revisionSuffix": "[parameters('revisionSuffix')]",
+        "containers": [
+          {
+            "name": "frontend",
+            "image": "[parameters('frontendImage')]",
+            "resources": { "cpu": 0.25, "memory": "0.5Gi" },
+            "env": [
+              { "name": "PORT", "value": "8080" },
+              { "name": "API_UPSTREAM", "value": "127.0.0.1:3000" }
+            ],
+            "probes": [
+              { "type": "Startup", "httpGet": { "path": "/healthz", "port": 8080 }, "periodSeconds": 5, "failureThreshold": 60 },
+              { "type": "Readiness", "httpGet": { "path": "/healthz", "port": 8080 }, "periodSeconds": 10, "timeoutSeconds": 3 },
+              { "type": "Liveness", "httpGet": { "path": "/healthz", "port": 8080 }, "periodSeconds": 30, "timeoutSeconds": 3 }
+            ]
+          },
+          {
+            "name": "backend",
+            "image": "[parameters('backendImage')]",
+            "resources": { "cpu": 0.5, "memory": "1Gi" },
+            "env": [
+              { "name": "NODE_ENV", "value": "production" },
+              { "name": "PORT", "value": "3000" },
+              { "name": "CORS_ORIGINS", "value": "[parameters('frontendOrigin')]" },
+              { "name": "DB_HOST", "value": "[parameters('databaseHost')]" },
+              { "name": "DB_PORT", "value": "1433" },
+              { "name": "DB_NAME", "value": "[parameters('databaseName')]" },
+              { "name": "DB_USER", "value": "[parameters('databaseUser')]" },
+              { "name": "DB_PASSWORD", "secretRef": "db-password" },
+              { "name": "JWT_SECRET", "secretRef": "jwt-secret" },
+              { "name": "DB_ENCRYPT", "value": "true" },
+              { "name": "DB_TRUST_SERVER_CERTIFICATE", "value": "false" },
+              { "name": "DB_CONNECT_ATTEMPTS", "value": "60" },
+              { "name": "UPLOADS_DIR", "value": "/app/uploads" },
+              { "name": "CHROMIUM_DISABLE_SANDBOX", "value": "true" }
+            ],
+            "probes": [
+              { "type": "Startup", "tcpSocket": { "port": 3000 }, "periodSeconds": 10, "timeoutSeconds": 3, "failureThreshold": 60 },
+              { "type": "Readiness", "httpGet": { "path": "/ready", "port": 3000 }, "periodSeconds": 10, "timeoutSeconds": 10, "failureThreshold": 6 },
+              { "type": "Liveness", "httpGet": { "path": "/health", "port": 3000 }, "periodSeconds": 30, "timeoutSeconds": 3 }
+            ]
+          }
+        ],
+        "scale": {
+          "minReplicas": 0,
+          "maxReplicas": 1,
+          "rules": [{ "name": "http", "http": { "metadata": { "concurrentRequests": "10" } } }]
+        }
+      }
+    }
+  }],
+  "outputs": {
+    "appUrl": { "type": "string", "value": "[concat('https://', reference(resourceId('Microsoft.App/containerApps', parameters('appName')), '2024-03-01').configuration.ingress.fqdn)]" }
+  }
+}

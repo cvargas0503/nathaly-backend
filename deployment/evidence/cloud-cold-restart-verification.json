@@ -1,0 +1,95 @@
+{
+  "startedAtUtc": "2026-11-15T05:14:37.8914007Z",
+  "revision": "nathaly-demo--r2-20261114",
+  "completed": true,
+  "scope": "restart current revision after removing only runtime IP firewall rules",
+  "deletedRuleNames": [
+    "nathaly-runtime-egress",
+    "nathaly-runtime-egress-00",
+    "nathaly-runtime-egress-01"
+  ],
+  "deletedRuleCount": 3,
+  "remainingServerRuleNames": [
+    "nathaly-bootstrap-client"
+  ],
+  "serverWideAzureResourcesRulePresent": false,
+  "databaseNetworkProof": "azure-demo-network.json",
+  "beforeReplicas": [
+    {
+      "name": "nathaly-demo--r2-20261114-654675d4f5-5dr4c",
+      "containers": [
+        {
+          "name": "frontend",
+          "ready": true,
+          "started": true,
+          "restartCount": 0,
+          "runningState": "Running"
+        },
+        {
+          "name": "backend",
+          "ready": true,
+          "started": true,
+          "restartCount": 1,
+          "runningState": "Running"
+        }
+      ]
+    }
+  ],
+  "restartIssued": true,
+  "restartRequestedAtUtc": "2026-11-15T05:14:46.0998223Z",
+  "afterReplicas": [
+    {
+      "name": "nathaly-demo--r2-20261114-5984db78cc-tnt4l",
+      "createdAt": "2026-11-15T05:14:50Z",
+      "containers": [
+        {
+          "name": "frontend",
+          "ready": true,
+          "started": true,
+          "restartCount": 0,
+          "runningState": "Running",
+          "runningStateDetails": "Container started at: 11/15/2026 5:15:14 AM."
+        },
+        {
+          "name": "backend",
+          "ready": true,
+          "started": true,
+          "restartCount": 0,
+          "runningState": "Running",
+          "runningStateDetails": "Container started at: 11/15/2026 5:15:14 AM."
+        }
+      ]
+    }
+  ],
+  "lastObservedAtUtc": "2026-11-15T05:15:43.229965Z",
+  "oldReplicaCount": 0,
+  "allContainersReady": true,
+  "replacementReplicaConfirmed": true,
+  "verifiedAtUtc": "2026-11-15T05:17:30.4604545Z",
+  "revisionHealth": "Healthy",
+  "revisionRunningState": "RunningAtMaxScale",
+  "runtimeIpServerRulesRemaining": 0,
+  "httpChecks": [
+    {
+      "status": 200,
+      "route": "/healthz"
+    },
+    {
+      "status": 401,
+      "route": "/api/v1/productos",
+      "authenticated": false
+    },
+    {
+      "status": 200,
+      "route": "/api/v1/auth/login"
+    },
+    {
+      "status": 200,
+      "route": "/api/v1/ventas/",
+      "reutilizada": true,
+      "newInvoiceCreated": false
+    }
+  ],
+  "invoiceProof": "cloud-update-verification.json",
+  "idleScaleToZeroCycleExercised": false
+}

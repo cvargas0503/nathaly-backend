@@ -1,0 +1,9 @@
+{
+  "subscriptionId": "<intended-subscription-id>",
+  "registryResourceId": "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerRegistry/registries/<registry-name>",
+  "benefitName": "AzureNewCustomerACRStandard12Months",
+  "eligibleOfferVerified": false,
+  "verifiedAtUtc": "<actual-UTC-verification-timestamp>",
+  "benefitExpiresAtUtc": "<actual-benefit-expiry-UTC>",
+  "evidence": "<retained-account-benefit-evidence-path-or-reference>"
+}

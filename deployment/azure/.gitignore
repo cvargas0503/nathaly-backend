@@ -1,0 +1,4 @@
+.private/
+*.local.env
+*.parameters.private.json
+*.state.json

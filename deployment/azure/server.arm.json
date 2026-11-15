@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "serverName": { "type": "string" },
+    "location": { "type": "string" },
+    "adminLogin": { "type": "string" },
+    "adminPassword": { "type": "securestring", "minLength": 16 }
+  },
+  "resources": [{
+    "type": "Microsoft.Sql/servers",
+    "apiVersion": "2023-08-01",
+    "name": "[parameters('serverName')]",
+    "location": "[parameters('location')]",
+    "tags": { "project": "nathaly", "purpose": "academic-demo" },
+    "properties": {
+      "version": "12.0",
+      "administratorLogin": "[parameters('adminLogin')]",
+      "administratorLoginPassword": "[parameters('adminPassword')]",
+      "minimalTlsVersion": "1.2",
+      "publicNetworkAccess": "Enabled"
+    }
+  }]
+}
