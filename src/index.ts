@@ -15,7 +15,7 @@ async function shutdown() {
   const deadline = setTimeout(() => process.exit(1), 30000)
   deadline.unref()
   try {
-    if (server) await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()))
+    if (server?.listening) await new Promise<void>((resolve, reject) => server!.close(error => error ? reject(error) : resolve()))
     await closeMSSQLPool()
     if (AppDataSource.isInitialized) await AppDataSource.destroy()
   } catch {
