@@ -1,6 +1,8 @@
 # Despliegue de demostración Nathaly
 
-Este entorno ejecuta frontend, backend y SQL Server Express en contenedores. La base utiliza exclusivamente estructura exportada y datos ficticios. No contiene una copia de registros comerciales.
+La aplicación dispone de una composición local con frontend, backend y SQL Server Express en contenedores, y de una publicación en Azure Container Apps con frontend y backend dockerizados y persistencia en Azure SQL. La base utiliza estructura revisada y datos ficticios; no contiene una copia de registros comerciales.
+
+Acceso público verificado: [aplicación de demostración](https://nathaly-demo.calmbay-82b9da56.eastus2.azurecontainerapps.io).
 
 ## Requisitos y arranque
 
@@ -22,10 +24,37 @@ Chromium se instala en la imagen API para los reportes. La opción local `CHROMI
 
 ## Publicación en nube
 
-`azure/` contiene una ruta de publicación con Azure Container Apps y Azure SQL. La publicación requiere una cuenta y suscripción verificadas, imágenes accesibles y secretos suministrados al entorno. No se registra una URL pública hasta comprobar un despliegue real.
+`azure/` contiene los manifiestos y el procedimiento de publicación. Azure Container Apps utiliza Consumption en East US 2, con dos contenedores en una misma aplicación: Nginx recibe el ingreso HTTPS y envía las solicitudes al backend en `127.0.0.1:3000`. La base Azure SQL se encuentra en Central US. Esta organización conserva el backend como monolito modular; no separa sus módulos comerciales en microservicios.
 
-Las cuotas gratuitas no equivalen a capacidad ilimitada. El SQL gratuito debe configurarse para pausarse al agotarse su cuota, y Container Apps debe utilizar Consumption, cero réplicas mínimas y una máxima. Las imágenes se deben almacenar en un registro cuyo plan esté dentro del presupuesto; este procedimiento no crea Azure Container Registry de pago.
+Las imágenes se almacenan en un ACR Standard privado y se recuperan mediante una identidad administrada con acceso de lectura. Los secretos SQL y JWT se suministran al entorno, sin incorporarlos a las imágenes ni a Git. La API valida el certificado TLS de Azure SQL; no se utiliza la excepción de certificado autofirmado de la demostración local.
+
+La regla de conectividad `AzureResources` se ha delimitado exclusivamente a la base `NATHALY_DEMO`. Permitir recursos Azure no equivale a una red privada ni a aislamiento frente a otras cuentas de Azure: otros recursos de la plataforma pueden intentar establecer conexiones y siguen necesitando credenciales válidas y permisos. Mantener TLS verificado, contraseñas robustas y la cuenta SQL de aplicación separada del administrador. No ampliar esta regla a todas las bases del servidor.
+
+### Verificación pública y actualización
+
+Las revisiones r1 y r2 alcanzaron estado saludable y cada una superó dieciséis comprobaciones HTTP públicas. Los casos incluyen autenticación, perfil, productos, dashboard, datos de facturación, ventas, reportes y revocación de sesión.
+
+- Crear una factura devuelve 201; repetir la misma solicitud y clave devuelve 200; cambiar el contenido con la misma clave devuelve 409.
+- La factura creada antes de la actualización se conserva en r2. Repetir esa solicitud después del reemplazo devuelve la misma factura y `reutilizada=true`, sin registrar otra venta.
+- La exportación PDF final devuelve un documento de 35 428 bytes.
+- Después del cierre de sesión, reutilizar la sesión anterior para consultar el perfil devuelve 401.
+- Las comprobaciones del navegador permiten acceder al dashboard, productos y facturas sin errores de página registrados.
+- Un reinicio controlado de r2 crea una nueva réplica, habilita ambos contenedores y recupera la factura existente sin reglas de IP de ejecución. No se ha medido un ciclo de inactividad hasta cero réplicas.
+
+Las imágenes de la actualización identifican las revisiones de código `3926aa2` del backend y `f2e2646` del frontend. Las huellas de las imágenes permiten relacionar estos artefactos con la revisión publicada. Estos resultados acreditan los casos evaluados; no constituyen una prueba de carga ni una certificación de todos los módulos.
+
+### Cuotas almacenamiento y vigencia
+
+Container Apps mantiene cero réplicas mínimas y una máxima. La base utiliza el beneficio SQL con `useFreeLimit=true`, un máximo de 32 GB y `freeLimitExhaustionBehavior=AutoPause`. La suscripción conserva `spendingLimit=On`. Estos controles no representan capacidad ilimitada ni garantizan disponibilidad permanente.
+
+El beneficio de ACR Standard cubre un registro durante doce meses cuando la cuenta es elegible. La suscripción de prueba puede suspenderse al finalizar sus treinta días o agotarse el crédito, aunque otro beneficio tenga una vigencia mayor. Revisar el estado de los recursos, las cuotas y el vencimiento de la suscripción antes de utilizar el entorno; no asumir gratuidad permanente.
+
+Azure SQL mantiene la información relacional entre revisiones. El contenedor del backend no dispone de un volumen persistente para cargas de archivos en la configuración de nube actual. Los archivos pueden perderse al reemplazar o reducir las réplicas; incorporar almacenamiento externo y respaldos antes de conservar archivos reales. Esta limitación no debe confundirse con los volúmenes persistentes de la composición local.
 
 ## Seguimiento de cambios
 
-Las modificaciones se revisan en ramas `feature/docker-cloud-deployment`. Su promoción sigue el flujo del repositorio. Cada liberación debe registrar los SHA de ambos repositorios, las huellas de las imágenes, las migraciones aplicadas, los resultados de comprobación y el destino verificado. Para retroceder se selecciona una imagen anterior; los cambios de datos requieren una estrategia propia y no deben revertirse eliminando información comercial.
+Las modificaciones se revisan en ramas `feature/docker-cloud-deployment`. El backend conserva la promoción `feature → develop → qa → master`; el frontend presenta sus contribuciones mediante pull requests hacia `main`.
+
+Las propuestas de integración son [PR 21 del backend hacia develop](https://github.com/cvargas0503/nathaly-backend/pull/21) y [PR 3 del frontend hacia main](https://github.com/cvargas0503/front-nathaly/pull/3). La publicación de demostración no equivale a su integración: ambos pull requests permanecen sujetos a revisión y no se han mezclado como parte de este despliegue.
+
+Cada liberación debe registrar los SHA de ambos repositorios, las huellas de las imágenes, las migraciones aplicadas, los resultados de comprobación y el destino verificado. Para retroceder se selecciona una imagen anterior; los cambios de datos requieren una estrategia propia y no deben revertirse eliminando información comercial.

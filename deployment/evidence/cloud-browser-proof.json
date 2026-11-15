@@ -1,0 +1,8 @@
+{
+  "base": "https://nathaly-demo.calmbay-82b9da56.eastus2.azurecontainerapps.io",
+  "login": true,
+  "dashboard": true,
+  "productos": true,
+  "facturas": true,
+  "pageErrors": []
+}

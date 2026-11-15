@@ -1,0 +1,87 @@
+{
+  "base": "https://nathaly-demo.calmbay-82b9da56.eastus2.azurecontainerapps.io",
+  "passed": 16,
+  "checks": [
+    {
+      "route": "/healthz",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/productos",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/productos",
+      "status": 401,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/auth/login",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/auth/profile",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/productos",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/dashboard/resumen",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/datos/datos-formulario-factura",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/datos/datos-productos-factura/1",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/ventas/",
+      "status": 201,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/ventas/",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/ventas/",
+      "status": 409,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/reportes/ventas?desde=2026-01-01&hasta=2027-12-31",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/reportes/ventas/exportar",
+      "status": 200,
+      "bytes": 35428,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/auth/logout",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "route": "/api/v1/auth/profile",
+      "status": 401,
+      "ok": true
+    }
+  ]
+}

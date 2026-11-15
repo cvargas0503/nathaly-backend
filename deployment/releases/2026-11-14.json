@@ -1,0 +1,49 @@
+{
+  "applicationUrl": "https://nathaly-demo.calmbay-82b9da56.eastus2.azurecontainerapps.io",
+  "verifiedAtUtc": "2026-11-15T05:20:21.8013747Z",
+  "revision": "nathaly-demo--r2-20261114",
+  "frontend": {
+    "sourceCommit": "f2e2646",
+    "image": "nathalycv0503261114.azurecr.io/nathaly-frontend@sha256:0c17d3142fefba21719fc0a1a61cfec769820421590bfa6b7951dca8577ff879",
+    "pullRequest": "https://github.com/cvargas0503/front-nathaly/pull/3",
+    "repository": "https://github.com/cvargas0503/front-nathaly"
+  },
+  "backend": {
+    "sourceCommit": "3926aa2",
+    "image": "nathalycv0503261114.azurecr.io/nathaly-backend@sha256:389fe68dbffb5560d5f52d573891f05ccf67c7de66e1f1a181f4d3f0bc5b0236",
+    "pullRequest": "https://github.com/cvargas0503/nathaly-backend/pull/21",
+    "repository": "https://github.com/cvargas0503/nathaly-backend"
+  },
+  "database": {
+    "region": "centralus",
+    "freeLimit": true,
+    "name": "NATHALY_DEMO",
+    "networkScope": "database-level Azure resources; authenticated, TLS verified",
+    "containsBusinessRecords": false,
+    "platform": "Azure SQL Database",
+    "exhaustionBehavior": "AutoPause"
+  },
+  "runtime": {
+    "region": "eastus2",
+    "minReplicas": 0,
+    "plan": "Consumption",
+    "maxReplicas": 1,
+    "platform": "Azure Container Apps",
+    "uploadsPersistent": false
+  },
+  "verification": {
+    "browserPageErrors": 0,
+    "replacementReplicaVerified": true,
+    "updatedPublicHttpChecks": 16,
+    "invoicePreservedAcrossRevision": true,
+    "idleScaleToZeroCycleExercised": false,
+    "initialPublicHttpChecks": 16,
+    "lastReportPdfBytes": 35428
+  },
+  "limitations": [
+    "Availability depends on quotas and trial subscription validity.",
+    "Cloud upload files are ephemeral.",
+    "Database Azure-resource exception permits authentication attempts from other Azure subscriptions."
+  ],
+  "mergedToProtectedBranches": false
+}

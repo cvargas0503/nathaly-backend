@@ -1,0 +1,24 @@
+{
+  "verifiedAt": "2026-11-15T05:11:58.819Z",
+  "database": "NATHALY_DEMO",
+  "scope": "database-level",
+  "rule": {
+    "name": "nathaly-azure-resources-demo",
+    "start_ip_address": "0.0.0.0",
+    "end_ip_address": "0.0.0.0"
+  },
+  "serverWideAzureResourcesRuleCount": 0,
+  "tls": {
+    "encrypt": true,
+    "trustServerCertificate": false
+  },
+  "applicationIdentity": {
+    "databaseName": "NATHALY_DEMO",
+    "applicationUser": "nathaly_app",
+    "databaseOwner": 0,
+    "databaseControl": 0
+  },
+  "exposure": "Resources from any Azure subscription can attempt authentication against this demo database; credentials are still required.",
+  "productionPrivateIsolation": false,
+  "businessDataChanged": false
+}

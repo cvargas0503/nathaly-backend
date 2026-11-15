@@ -46,8 +46,29 @@ negocio. Sólo admite `NATHALY_DEMO` o bases temporales con el prefijo
 exclusivamente en la demostración para compatibilizar el esquema con las
 migraciones que insertan permisos sin ese campo.
 
-Los scripts `read-metadata.ps1` y `build-baseline.py` permiten reconstruir el
-baseline desde metadatos de catálogo; no seleccionan filas de tablas de negocio.
-`raw-metadata.json` documenta los metadatos utilizados. No debe confundirse el
-baseline con un respaldo de datos ni con una migración incremental de una
-instalación comercial existente.
+## Procedencia y validación en Azure SQL
+
+El baseline procede de una exportación de metadatos de catálogo revisada, sin
+seleccionar filas de las tablas comerciales. `baseline-summary.json` conserva
+el resumen de la estructura incluida. Para instalar la demostración se utilizan
+el SQL y el seed publicados en este directorio; las herramientas privadas de
+extracción y sus archivos intermedios no forman parte del repositorio ni son
+dependencias de ejecución.
+
+La inicialización en Azure SQL verificó 69 tablas, 271 claves foráneas y diez
+entradas del registro de preparación, incluyendo el baseline y las migraciones.
+La cuenta contenida `nathaly_app` dispone de lectura, escritura y ejecución, con
+los permisos necesarios para los tres tipos de tabla, sin pertenecer al rol
+`db_owner`. La conexión se valida con cifrado y sin confiar en certificados no
+verificados. No se copiaron registros comerciales de la base de referencia.
+
+La regla `AzureResources` debe definirse únicamente para `NATHALY_DEMO`.
+Permitir recursos Azure admite intentos de conexión desde recursos de otras
+cuentas de la plataforma; no establece una red privada ni concede acceso sin
+autenticación. Mantener contraseñas robustas, TLS verificado y permisos limitados
+en la cuenta de aplicación. No aplicar una apertura equivalente a todas las
+bases del servidor.
+
+No debe confundirse el baseline con un respaldo de datos ni con una migración
+incremental para una instalación comercial existente. Las comprobaciones de
+demostración no autorizan ejecutar el seed sobre una base de negocio.

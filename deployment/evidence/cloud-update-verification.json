@@ -1,0 +1,7 @@
+{
+  "base": "https://nathaly-demo.calmbay-82b9da56.eastus2.azurecontainerapps.io",
+  "invoicePreservedAcrossRevision": true,
+  "sameRequestReturnsSameInvoice": true,
+  "status": 200,
+  "reutilizada": true
+}
