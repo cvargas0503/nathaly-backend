@@ -16,8 +16,11 @@ param(
     [string]$RegistryServer,
     [string]$RegistryIdentityResourceId,
     [string]$AcrBenefitProofFile,
+    [switch]$ReuseExistingEnvironment,
     [ValidatePattern('^[a-z0-9-]{1,20}$')][string]$RevisionSuffix=('r'+(Get-Date -Format 'yyMMddHHmmss')),
     [string]$BootstrapClientIPv4,
+    [string[]]$AdditionalSqlOutboundIPv4=@(),
+    [switch]$AzureDemoDatabaseFirewallConfigured,
     [string]$AzExecutable='az'
 )
 $ErrorActionPreference='Stop'
@@ -63,11 +66,15 @@ function Initialize-PrivateDirectory {
     $private=Join-Path $PSScriptRoot '.private'
     [void][IO.Directory]::CreateDirectory($private)
     if ($IsWindows) {
-        $acl=[Security.AccessControl.DirectorySecurity]::new()
-        $acl.SetAccessRuleProtection($true,$false)
         $sid=[Security.Principal.WindowsIdentity]::GetCurrent().User
-        $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($sid,'FullControl','ContainerInherit,ObjectInherit','None','Allow'))
-        Set-Acl -LiteralPath $private -AclObject $acl
+        & icacls.exe $private '/inheritance:r' '/grant:r' "*$($sid.Value):(OI)(CI)F" '/Q' | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot secure the private parameter directory DACL.' }
+        $acl=Get-Acl -LiteralPath $private
+        foreach ($rule in @($acl.Access)) {
+            if ($rule.AccessControlType -ne 'Allow') { continue }
+            $ruleSid=$rule.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value
+            if ($ruleSid -notin @($sid.Value,'S-1-5-18','S-1-5-32-544')) { throw 'Private parameter directory has an unexpected explicit access rule.' }
+        }
     } else { & chmod 700 -- $private; if ($LASTEXITCODE -ne 0) { throw 'Cannot secure private parameter directory.' } }
     return $private
 }
@@ -130,8 +137,10 @@ function Confirm-ExistingAcr([string]$LoginServer) {
     if (-not $AcrBenefitProofFile -or -not (Test-Path -LiteralPath $AcrBenefitProofFile -PathType Leaf)) { throw 'ACR requires locally retained evidence that the specific subscription and Standard registry qualify for the 12-month new-customer benefit.' }
     $proof=Get-Content -LiteralPath $AcrBenefitProofFile -Raw | ConvertFrom-Json
     if ((Field $proof 'subscriptionId') -ne $SubscriptionId -or (Field $proof 'eligibleOfferVerified') -ne $true -or (Field $proof 'benefitName') -ne 'AzureNewCustomerACRStandard12Months') { throw 'ACR benefit evidence does not confirm the intended subscription and offer.' }
-    $verifiedAt=[DateTimeOffset]::Parse((Field $proof 'verifiedAtUtc'))
-    $expiresAt=[DateTimeOffset]::Parse((Field $proof 'benefitExpiresAtUtc'))
+    $verifiedValue=Field $proof 'verifiedAtUtc'
+    $verifiedAt=if ($verifiedValue -is [DateTime] -or $verifiedValue -is [DateTimeOffset]) { [DateTimeOffset]$verifiedValue } else { [DateTimeOffset]::Parse([string]$verifiedValue,[Globalization.CultureInfo]::InvariantCulture) }
+    $expiryValue=Field $proof 'benefitExpiresAtUtc'
+    $expiresAt=if ($expiryValue -is [DateTime] -or $expiryValue -is [DateTimeOffset]) { [DateTimeOffset]$expiryValue } else { [DateTimeOffset]::Parse([string]$expiryValue,[Globalization.CultureInfo]::InvariantCulture) }
     if ($verifiedAt -gt [DateTimeOffset]::UtcNow -or $expiresAt -le [DateTimeOffset]::UtcNow -or -not (Field $proof 'evidence')) { throw 'ACR benefit evidence is missing, expired or dated in the future.' }
     $registries=@(Invoke-AzJson @('acr','list'))
     $registry=$registries | Where-Object { (Field $_ 'loginServer') -eq $LoginServer } | Select-Object -First 1
@@ -143,7 +152,7 @@ function Confirm-ExistingAcr([string]$LoginServer) {
     $identity=Get-AzureResource $RegistryIdentityResourceId '2023-01-31'
     $principal=Field (Field $identity 'properties') 'principalId'
     $registryId=Field $registry 'id'
-    $roles=@(Invoke-AzJson @('role','assignment','list','--scope',$registryId,'--all'))
+    $roles=@(Invoke-AzJson @('role','assignment','list','--scope',$registryId))
     $pullRole=$roles | Where-Object { (Field $_ 'principalId') -eq $principal -and (Field $_ 'scope') -eq $registryId -and (Field $_ 'roleDefinitionId') -like '*/7f951dda-4ed3-4680-a7ca-43fe172d538d' }
     if (-not $pullRole) { throw 'The user-assigned identity needs AcrPull scoped to this registry before application deployment.' }
     $armAuth=Invoke-AzJson @('acr','config','authentication-as-arm','show','--registry',(Field $registry 'name'))
@@ -225,6 +234,13 @@ try {
     }
 
     [void](Confirm-FreeDatabase)
+    if (-not $AzureDemoDatabaseFirewallConfigured -and $AdditionalSqlOutboundIPv4.Count -eq 0) { throw 'Provide verified runtime egress IPv4 addresses or explicitly select the preconfigured database-scoped Azure demo firewall. Advertised platform IP addresses can differ from runtime egress.' }
+    if ($AzureDemoDatabaseFirewallConfigured -and $AdditionalSqlOutboundIPv4.Count -gt 0) { throw 'Choose one demo network strategy: database-scoped Azure access or specific runtime IPv4 addresses.' }
+    if ($AzureDemoDatabaseFirewallConfigured) { Write-Host 'Using the explicitly preconfigured NATHALY_DEMO database firewall for Azure resources. Authentication and verified TLS remain required; this does not provide subscription-level network isolation.' }
+    foreach ($ip in $AdditionalSqlOutboundIPv4) {
+        $parsed=$null
+        if (-not [Net.IPAddress]::TryParse($ip,[ref]$parsed) -or $parsed.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or $ip -eq '0.0.0.0') { throw 'AdditionalSqlOutboundIPv4 requires specific verified IPv4 addresses.' }
+    }
     if (-not $FrontendImage -or -not $BackendImage) { throw 'Provide pullable frontend and backend image references; local Docker image names cannot be pulled by Azure.' }
     if ($FrontendImage -notmatch '/' -or $BackendImage -notmatch '/') { throw 'Use remote registry/namespace image references, preferably digest-pinned; no paid registry is created.' }
     $databaseUser=Require-Value $privateValues 'DB_USER'
@@ -234,31 +250,38 @@ try {
     $registryUsername='';$registryPassword=''
     if ($pullRegistryServer -match '\.azurecr\.io$' -and -not $RegistryServer) { Confirm-ExistingAcr $pullRegistryServer }
     if ($pullRegistryServer -and -not $RegistryIdentityResourceId) { $registryUsername=Require-Value $privateValues 'REGISTRY_USERNAME';$registryPassword=Require-Value $privateValues 'REGISTRY_PASSWORD' }
-    [void](Deploy-Template 'environment.arm.json' @{environmentName=$EnvironmentName;location=$Location} 'nathaly-consumption-environment')
+    $existingEnvironments=@(Invoke-AzJson @('resource','list','--resource-group',$ResourceGroup,'--resource-type','Microsoft.App/managedEnvironments'))
+    if (-not ($existingEnvironments | Where-Object { (Field $_ 'id') -eq $environmentId })) {
+        if ($ReuseExistingEnvironment) { throw 'ReuseExistingEnvironment was selected but the named environment does not exist.' }
+        [void](Deploy-Template 'environment.arm.json' @{environmentName=$EnvironmentName;location=$Location} 'nathaly-consumption-environment')
+    }
     $environment=Get-AzureResource $environmentId $appApi
+    if ((Field (Field $environment 'properties') 'provisioningState') -ne 'Succeeded') { throw 'The existing Container Apps environment is still provisioning or failed. Inspect its operation; no replacement environment or repeated update was submitted.' }
     $domain=Field (Field $environment 'properties') 'defaultDomain'
     if (-not $domain) { throw 'Azure did not return the environment domain; no application URL was assumed.' }
     $origin="https://$AppName.$domain"
     $values=@{appName=$AppName;environmentName=$EnvironmentName;location=$Location;frontendImage=$FrontendImage;backendImage=$BackendImage;frontendOrigin=$origin;databaseHost="$SqlServerName.database.windows.net";databaseName=$dbName;databaseUser=$databaseUser;databasePassword=$databasePassword;jwtSecret=$jwt;registryServer=$pullRegistryServer;registryIdentityResourceId=$RegistryIdentityResourceId;registryUsername=$registryUsername;registryPassword=$registryPassword;revisionSuffix=$RevisionSuffix}
     $deployment='nathaly-app-'+$RevisionSuffix
-    [void](Deploy-Template 'app.arm.json' $values $deployment -NoWait)
-    $app=$null;$ips=@()
-    for ($attempt=0;$attempt -lt 24;$attempt++) {
-        Start-Sleep -Seconds 5
-        # Inspect provisioning state rather than retrying app creation if its outcome is uncertain.
-        $app=Get-AzureResource $appId $appApi
-        $ips=@(Field (Field $app 'properties') 'outboundIpAddresses') | Where-Object { $_ }
-        if ($ips.Count -gt 0) { break }
-    }
-    if ($ips.Count -eq 0) { throw 'Azure did not return app outbound addresses. Deployment may still be running; inspect it before retrying. No broad SQL firewall rule was created.' }
     $counter=0
-    foreach ($ip in ($ips | Sort-Object -Unique)) { Add-SqlFirewall ('nathaly-app-outbound-'+$counter.ToString('00')) $ip; $counter++ }
+    foreach ($ip in ($AdditionalSqlOutboundIPv4 | Sort-Object -Unique)) { Add-SqlFirewall ('nathaly-runtime-egress-'+$counter.ToString('00')) $ip; $counter++ }
+    [void](Deploy-Template 'app.arm.json' $values $deployment -NoWait)
     [void](Invoke-AzJson @('deployment','group','wait','--resource-group',$ResourceGroup,'--name',$deployment,'--created','--timeout','1800'))
-    $app=Get-AzureResource $appId $appApi
-    $properties=Field $app 'properties'
-    if ((Field $properties 'provisioningState') -ne 'Succeeded') { throw 'The application provisioning state is not Succeeded.' }
-    $latestRevision=Field $properties 'latestRevisionName'
-    if (-not $latestRevision -or (Field $properties 'latestReadyRevisionName') -ne $latestRevision) { throw 'The latest application revision is not ready; do not report a completed deployment.' }
+    $runtimeReady=$false
+    for ($attempt=0;$attempt -lt 30;$attempt++) {
+        $app=Get-AzureResource $appId $appApi
+        $properties=Field $app 'properties'
+        $latestRevision=Field $properties 'latestRevisionName'
+        if ($latestRevision -eq "$AppName--$RevisionSuffix") {
+            $revision=Get-AzureResource "$appId/revisions/$latestRevision" $appApi
+            $revisionProperties=Field $revision 'properties'
+            $runtimeReady=(Field $properties 'provisioningState') -eq 'Succeeded' -and (Field $properties 'latestReadyRevisionName') -eq $latestRevision -and (Field $revisionProperties 'healthState') -eq 'Healthy' -and (Field $revisionProperties 'runningState') -in @('Running','RunningAtMaxScale')
+            if ($runtimeReady) { break }
+            if ((Field $revisionProperties 'runningState') -in @('Failed','ActivationFailed')) { throw 'The new revision failed activation. Inspect probes, replicas and console logs; no automatic redeployment was attempted.' }
+        }
+        Write-Host 'Waiting for the published revision to become healthy; ARM provisioning alone is insufficient.'
+        Start-Sleep -Seconds 15
+    }
+    if (-not $runtimeReady) { throw 'The latest revision is not healthy and running. Inspect its actual state before attempting another deployment.' }
     $fqdn=Field (Field (Field $properties 'configuration') 'ingress') 'fqdn'
     if (-not $fqdn) { throw 'The ready application did not return an ingress FQDN.' }
     [void](Confirm-FreeDatabase)
