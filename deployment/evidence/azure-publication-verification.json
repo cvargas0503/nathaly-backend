@@ -1,0 +1,170 @@
+{
+  "verifiedAtUtc": "2026-11-15T05:20:54.4538551Z",
+  "platform": "Azure Container Apps Consumption",
+  "application": {
+    "name": "nathaly-demo",
+    "url": "https://nathaly-demo.calmbay-82b9da56.eastus2.azurecontainerapps.io",
+    "provisioningState": "Succeeded",
+    "runningStatus": "Running",
+    "latestRevisionName": "nathaly-demo--r2-20261114",
+    "latestReadyRevisionName": "nathaly-demo--r2-20261114",
+    "traffic": [
+      {
+        "latestRevision": true,
+        "revisionName": null,
+        "weight": 100
+      }
+    ]
+  },
+  "revision": {
+    "name": "nathaly-demo--r2-20261114",
+    "active": true,
+    "healthState": "Healthy",
+    "runningState": "RunningAtMaxScale",
+    "provisioningState": "Provisioned",
+    "replicas": 1
+  },
+  "images": [
+    {
+      "name": "frontend",
+      "image": "nathalycv0503261114.azurecr.io/nathaly-frontend@sha256:0c17d3142fefba21719fc0a1a61cfec769820421590bfa6b7951dca8577ff879",
+      "sha256": "0c17d3142fefba21719fc0a1a61cfec769820421590bfa6b7951dca8577ff879",
+      "sourceCommit": "f2e264604cacd812fe98e11f6c93f61ac6886720",
+      "sourceVerification": "OCI revision label in local image with identical deployed digest"
+    },
+    {
+      "name": "backend",
+      "image": "nathalycv0503261114.azurecr.io/nathaly-backend@sha256:389fe68dbffb5560d5f52d573891f05ccf67c7de66e1f1a181f4d3f0bc5b0236",
+      "sha256": "389fe68dbffb5560d5f52d573891f05ccf67c7de66e1f1a181f4d3f0bc5b0236",
+      "sourceCommit": "3926aa28423b88ef68e5cc347dc992956a48f0fc",
+      "sourceVerification": "OCI revision label in local image with identical deployed digest"
+    }
+  ],
+  "replicas": [
+    {
+      "name": "nathaly-demo--r2-20261114-5984db78cc-tnt4l",
+      "createdAtUtc": "2026-11-15T05:14:50Z",
+      "containers": [
+        {
+          "name": "frontend",
+          "ready": true,
+          "started": true,
+          "restartCount": 0,
+          "runningState": "Running"
+        },
+        {
+          "name": "backend",
+          "ready": true,
+          "started": true,
+          "restartCount": 0,
+          "runningState": "Running"
+        }
+      ]
+    }
+  ],
+  "httpVerification": {
+    "sourceFile": "cloud-final-http.json",
+    "base": "https://nathaly-demo.calmbay-82b9da56.eastus2.azurecontainerapps.io",
+    "passed": 16,
+    "checks": [
+      {
+        "route": "/healthz",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/productos",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/productos",
+        "status": 401,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/auth/login",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/auth/profile",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/productos",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/dashboard/resumen",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/datos/datos-formulario-factura",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/datos/datos-productos-factura/1",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/ventas/",
+        "status": 201,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/ventas/",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/ventas/",
+        "status": 409,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/reportes/ventas?desde=2026-01-01&hasta=2027-12-31",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/reportes/ventas/exportar",
+        "status": 200,
+        "bytes": 35428,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/auth/logout",
+        "status": 200,
+        "ok": true
+      },
+      {
+        "route": "/api/v1/auth/profile",
+        "status": 401,
+        "ok": true
+      }
+    ]
+  },
+  "updateVerification": {
+    "sourceFile": "cloud-update-verification.json",
+    "invoicePreservedAcrossRevision": true,
+    "sameRequestReturnsSameInvoice": true,
+    "status": 200,
+    "reutilizada": true
+  },
+  "restartVerification": {
+    "sourceFile": "cloud-cold-restart-verification.json",
+    "completed": true,
+    "replacementReplicaConfirmed": true,
+    "oldReplicaCount": 0,
+    "runtimeIpServerRulesRemaining": 0,
+    "serverWideAzureResourcesRulePresent": false,
+    "idleScaleToZeroCycleExercised": false
+  },
+  "databaseNetworkingEvidence": "azure-demo-network.json"
+}
