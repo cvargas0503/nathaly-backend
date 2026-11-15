@@ -23,12 +23,18 @@ const config = {
   pool: { max: 3, min: 0, idleTimeoutMillis: 10000 },
 };
 async function apply(pool, filename, label) {
-  const content = fs.readFileSync(filename, 'utf8').replace(/^\uFEFF/, '');
+  const original = fs.readFileSync(filename, 'utf8').replace(/^\uFEFF/, '');
+  const content = original.replace(/\r\n/g, '\n');
   const hash = crypto.createHash('sha256').update(content).digest('hex');
   const prior = await pool.request().input('name', sql.NVarChar(200), label)
     .query('SELECT Hash FROM dbo.DeploymentMigration WHERE Name=@name');
   if (prior.recordset.length) {
-    if (prior.recordset[0].Hash !== hash) throw new Error(`Already applied migration changed: ${label}`);
+    if (prior.recordset[0].Hash !== hash) {
+      const originalHash = crypto.createHash('sha256').update(original).digest('hex');
+      if (prior.recordset[0].Hash !== originalHash) throw new Error(`Already applied migration changed: ${label}`);
+      await pool.request().input('name',sql.NVarChar(200),label).input('hash',sql.Char(64),hash)
+        .query('UPDATE dbo.DeploymentMigration SET Hash=@hash WHERE Name=@name');
+    }
     console.log(`Already applied: ${label}`); return;
   }
   if (label === 'baseline') {
