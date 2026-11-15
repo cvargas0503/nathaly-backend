@@ -3,7 +3,7 @@ import { Response } from 'express';
 import { AppDataSource } from '../../../ormconfig';
 import { AuthenticatedRequest } from '../auth/auth.middleware';
 import { toCamelCase } from '../../helpers';
-import puppeteer from 'puppeteer';
+import { launchBrowser } from '../../utils/browser';
 
 /**
  * GET /reportes/ventas?desde=YYYY-MM-DD&hasta=YYYY-MM-DD&idSucursal=N
@@ -188,7 +188,7 @@ export const exportarReporteVentas = async (req: AuthenticatedRequest, res: Resp
         </html>`;
 
         if (formato === 'pdf') {
-            const browser = await puppeteer.launch({ headless: true });
+            const browser = await launchBrowser();
             const page = await browser.newPage();
             await page.setContent(html, { waitUntil: 'load' });
             const pdfBuffer = await page.pdf({

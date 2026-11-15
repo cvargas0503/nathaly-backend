@@ -11,7 +11,7 @@ import { ArqueoCierreDetalle } from "../entities/ArqueoCierreDetalle";
 import { AuthenticatedRequest } from "../../auth/auth.middleware";
 import { EstadoCaja } from "../../catalogos/entities/EstadoCaja";
 import { Caja } from "../entities/Caja";
-import puppeteer from "puppeteer";
+import { launchBrowser } from '../../../utils/browser';
 import { obtenerArqueoCompleto } from "./services/ObtenerArqueoCompleto";
 
 export const getDatosArqueoInicio = async (req: Request, res: Response): Promise<Response> => {
@@ -257,7 +257,7 @@ export const generarArqueoPdf = async (req: Request, res: Response) => {
     try {
         const html = await obtenerArqueoCompleto(req.params as any);
         // 2. Inicializar Puppeteer
-        const browser = await puppeteer.launch({ headless: true });
+        const browser = await launchBrowser();
         const page = await browser.newPage();
 
         // 3. Setear el contenido HTML

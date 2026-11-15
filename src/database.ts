@@ -24,3 +24,9 @@ export const getMSSQLPool = (): Promise<sql.ConnectionPool> => {
   }
   return poolPromise;
 };
+
+export async function closeMSSQLPool(): Promise<void> {
+  const current = poolPromise;
+  poolPromise = undefined;
+  if (current) await (await current).close();
+}

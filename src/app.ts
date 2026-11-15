@@ -34,7 +34,21 @@ import auditoria from './modules/auditoria/auditoria.routes';
 import reposicion from './modules/reposicion/reposicion.routes';
 import cookieParser from 'cookie-parser';
 import { environment } from './config/environment'
+import { AppDataSource } from '../ormconfig'
 const app = express()
+app.get('/health', (_req, res) => { res.json({ status: 'ok' }) })
+app.get('/ready', async (_req, res) => {
+  if (!AppDataSource.isInitialized) {
+    res.status(503).json({ status: 'not_ready' })
+    return
+  }
+  try {
+    await AppDataSource.query('SELECT 1 AS ready')
+    res.json({ status: 'ready' })
+  } catch {
+    res.status(503).json({ status: 'not_ready' })
+  }
+})
 const allowedOrigins = environment.allowedOrigins
 app.use(cors({
   origin: allowedOrigins,
